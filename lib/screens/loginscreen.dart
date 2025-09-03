@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drgwallet/services/firebase_authservice.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:drgwallet/router.dart';
 @RoutePage()
 
 class LoginScreen extends StatefulWidget {
@@ -16,12 +18,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() async {
     try {
-      final user = await _auth.signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      if (user != null) {
-        Navigator.pushReplacementNamed(context, '/home');
+      if (userCredential.user != null) {
+        context.router.replaceAll([const HomeRoute()]);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -29,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

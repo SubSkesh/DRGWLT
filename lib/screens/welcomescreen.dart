@@ -88,25 +88,30 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 ),
 
                 const Spacer(),
-
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary, // oro
+                    foregroundColor: theme.colorScheme.onPrimary, // testo nero
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   onPressed: () {
-                    context.router.push(const SplashRoute());
+                    context.router.push(const RegisterRoute());
                   },
-                  child: const Text('Crea un account'),
+                  child: const Text(
+                    'Get Started',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      fontFamily: 'Roboto', // o "Akira" se l’hai nel pubspec
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () {
-                    context.router.push(const LoginRoute());
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    backgroundColor: theme.colorScheme.primary,
 
-                  ),
-                  child: const Text('Accedi'),
-                ),
               ],
             ),
           ),

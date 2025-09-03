@@ -14,18 +14,16 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+
+
   @override
   void initState() {
     super.initState();
-
-    // 1) Inizializza Firebase
-    // 2) Attendi 2 secondi
     Future.wait([
       Firebase.initializeApp(),
       Future.delayed(const Duration(seconds: 2)),
     ]).then((_) {
-      // 3) Naviga a AuthGateRoute (che a sua volta deciderà Home/Welcome)
-      context.router.replace(const AuthGateRoute());
+      context.router.replace(const AuthGateRoute()); // Usa replace
     });
   }
 

@@ -1,100 +1,130 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'enum.dart';
+
 class Good {
   final String id;
   final String name;
-  final double price; // es: 50.0
-  final Unit unit; // es: Unit.gram
-  final String? note;
+  final Unit baseUnit;
+  final Category category;
+  final String? description;
+  final double? currentMarketPrice;
+  final DateTime createdAt;
+  final DateTime? lastUpdated;
 
-   Good({
+  const Good({
     required this.id,
     required this.name,
-    required this.price,
-    required this.unit,
-    this.note,
+    required this.baseUnit,
+    required this.category,
+    this.description,
+    this.currentMarketPrice,
+    required this.createdAt,
+    this.lastUpdated,
   });
 
-  //<@override
+  @override
   bool operator ==(Object other) =>
       identical(this, other) ||
           (other is Good &&
               runtimeType == other.runtimeType &&
               id == other.id &&
               name == other.name &&
-              price == other.price &&
-              unit == other.unit &&
-              note == other.note
-          );
-
+              baseUnit == other.baseUnit &&
+              category == other.category &&
+              description == other.description &&
+              currentMarketPrice == other.currentMarketPrice &&
+              createdAt == other.createdAt &&
+              lastUpdated == other.lastUpdated);
 
   @override
   int get hashCode =>
       id.hashCode ^
       name.hashCode ^
-      price.hashCode ^
-      unit.hashCode ^
-      note.hashCode;
-
+      baseUnit.hashCode ^
+      category.hashCode ^
+      description.hashCode ^
+      currentMarketPrice.hashCode ^
+      createdAt.hashCode ^
+      lastUpdated.hashCode;
 
   @override
   String toString() {
     return 'Good{' +
         ' id: $id,' +
         ' name: $name,' +
-        ' price: $price,' +
-        ' unit: $unit,' +
-        ' note: $note,' +
+        ' baseUnit: $baseUnit,' +
+        ' category: $category,' +
+        ' description: $description,' +
+        ' currentMarketPrice: $currentMarketPrice,' +
+        ' createdAt: $createdAt,' +
+        ' lastUpdated: $lastUpdated,' +
         '}';
   }
-
 
   Good copyWith({
     String? id,
     String? name,
-    double? price,
-    Unit? unit,
-    String? note,
+    Unit? baseUnit,
+    Category? category,
+    String? description,
+    double? currentMarketPrice,
+    DateTime? createdAt,
+    DateTime? lastUpdated,
   }) {
     return Good(
       id: id ?? this.id,
       name: name ?? this.name,
-      price: price ?? this.price,
-      unit: unit ?? this.unit,
-      note: note ?? this.note,
+      baseUnit: baseUnit ?? this.baseUnit,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      currentMarketPrice: currentMarketPrice ?? this.currentMarketPrice,
+      createdAt: createdAt ?? this.createdAt,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }
 
-
+  // PER FIRESTORE - SENZA ID
   Map<String, dynamic> toMap() {
     return {
-      'id': this.id,
-      'name': this.name,
-      'price': this.price,
-      'unit': this.unit,
-      'note': this.note,
+      'name': name,
+      'baseUnit': baseUnit.toString().split('.').last, // Salva come stringa
+      'category': category.toString().split('.').last, // Salva come stringa
+      'description': description,
+      'currentMarketPrice': currentMarketPrice,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
     };
   }
 
-  factory Good.fromMap(Map<String, dynamic> map) {
+  // DA FIRESTORE - CON ID SEPARATO
+  factory Good.fromMap(Map<String, dynamic> map, String id) {
     return Good(
-      id: map['id'] as String,
+      id: id,
       name: map['name'] as String,
-      price: map['price'] as double,
-      unit: map['unit'] as Unit,
-      note: map['note'] as String,
+      baseUnit: _stringToUnit(map['baseUnit'] as String),
+      category: _stringToCategory(map['category'] as String),
+      description: map['description'] as String?,
+      currentMarketPrice: map['currentMarketPrice'] as double?,
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      lastUpdated: map['lastUpdated'] != null
+          ? (map['lastUpdated'] as Timestamp).toDate()
+          : null,
     );
   }
 
+  // Helper per convertire stringa a Unit
+  static Unit _stringToUnit(String unitString) {
+    return Unit.values.firstWhere(
+          (unit) => unit.toString().split('.').last == unitString,
+      orElse: () => Unit.gram,
+    );
+  }
 
-  //</editor-fold>
-
-  // opzionale: per tag o info extra
-}
-enum Unit {
-  gram,
-  kilogram,
-  ton,
-  piece,
-  liter,
-  milliliter,
-  custom // opzionale per qualcosa di fuori standard
+  // Helper per convertire stringa a Category
+  static Category _stringToCategory(String categoryString) {
+    return Category.values.firstWhere(
+          (category) => category.toString().split('.').last == categoryString,
+      orElse: () => Category.other,
+    );
+  }
 }

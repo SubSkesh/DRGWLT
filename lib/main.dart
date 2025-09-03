@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'utils/auth_gate.dart';
 import 'theme/app_theme.dart';
 import 'screens/splashscreen.dart';
-import 'router.dart';           // il tuo router auto_route
-
+import 'router.dart';// il tuo router auto_route
+import 'utils/authnotifier.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();// a che serve questo?ho trovato :Firebase.initializeApp() needs to call native code to initialize Firebase, and since the plugin needs to use platform channels to call the native code, which is done asynchronously therefore you have to call ensureInitialized() to make sure that you have an instance of the WidgetsBinding.
-  await Firebase.initializeApp();
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();//- Garantisce che il binding tra il framework Flutter e la piattaforma nativa sia pronto
 
+
+  // Inizializza Firebase con la nuova sintassi
+  await Firebase.initializeApp( //- Inizializza il core di Firebase, caricando la configurazione generata per ogni piattaforma (Android, iOS, Web)
+
+  options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -18,7 +27,7 @@ class MyApp extends StatelessWidget {
 
   //final Future<void> _initFuture = _initializeApp(); //funzione che inizializza l'app
 
-  final _appRouter = AppRouter();//la variabile che gestisce il routing
+  final _appRouter = AppRouter();//la variabile che gestisce il routing1
 
 
   // static Future<void> _initializeApp() async {
@@ -27,8 +36,9 @@ class MyApp extends StatelessWidget {
   //   await Future.delayed(const Duration(seconds: 2));
   @override
   Widget build(BuildContext context) {
+    // final _authNotifier = AuthNotifier();
     return MaterialApp.router(
-      routerConfig: _appRouter.config(),
+      routerConfig: _appRouter.config(),// reevaluateListenable: _authNotifier,),
       title: 'DrgWallet',
       theme: AppTheme.darkTheme,
       // home: FutureBuilder<void>(
