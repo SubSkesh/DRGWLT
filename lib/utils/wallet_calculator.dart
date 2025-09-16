@@ -2,7 +2,6 @@ import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/models/wallet.dart';
 import 'package:drgwallet/models/good.dart';
 import 'package:drgwallet/utils/deal_calculator.dart';
-import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/models/enum.dart';
 
 class WalletCalculator {

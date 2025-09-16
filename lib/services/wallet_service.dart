@@ -176,15 +176,13 @@ class WalletService {
       'endDate': endDate,
     };
   }
-// Aggiungi questo metodo al WalletService
-  Future<int> getWalletDealsCount(String walletId) async {
-    final snapshot = await _firestore
+
+  Stream<int> getWalletDealsCount(String walletId) {
+    return _firestore
         .collection('deals')
         .where('walletId', isEqualTo: walletId)
-        .count()
-        .get();
-
-    return snapshot.count ?? 0;
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
   /// Aggiorna un wallet esistente
   Future<void> updateWallet(String walletId, String newName, {String? newDesc}) async {

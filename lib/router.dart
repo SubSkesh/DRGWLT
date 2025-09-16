@@ -12,6 +12,8 @@ import 'package:drgwallet/screens/profile_screen.dart';
 import 'package:drgwallet/screens/stats_screen.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/screens/add_wallet_screen.dart';
+import 'package:drgwallet/screens/todeletescreen.dart';
+
 
 part 'router.gr.dart'; // Questo sarà generato da build_runner
 
@@ -31,5 +33,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: ProfileRoute.page),
     AutoRoute(page: StatsRoute.page),
     AutoRoute(page: AddWalletRoute.page),
+    //da eliminare
+    AutoRoute(page: ToDeleteRoute.page),
   ];
 }

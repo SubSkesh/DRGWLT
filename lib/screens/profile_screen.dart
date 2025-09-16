@@ -24,6 +24,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _loadUserData();
   }
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   Future<void> _loadUserData() async {
     try {
@@ -46,9 +50,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _auth.signOut();
       // Navigate to auth gate or welcome screen
+      context.router.push(const AuthGateRoute());
     } catch (e) {
       // Handle error
     }
+  }
+  void _onPressAction() {
+    context.router.push(const ToDeleteRoute());
   }
 
   @override
@@ -62,6 +70,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profilo'),
+        actions: [
+          IconButton(
+            onPressed:_onPressAction,
+            icon: const Icon(Icons.account_balance_wallet_rounded),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -7,18 +7,17 @@ import 'theme/app_theme.dart';
 import 'screens/splashscreen.dart';
 import 'router.dart';// il tuo router auto_route
 import 'utils/authnotifier.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();//- Garantisce che il binding tra il framework Flutter e la piattaforma nativa sia pronto
 
 
   // Inizializza Firebase con la nuova sintassi
   await Firebase.initializeApp( //- Inizializza il core di Firebase, caricando la configurazione generata per ogni piattaforma (Android, iOS, Web)
-
-  options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(MyApp());
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

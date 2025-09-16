@@ -42,6 +42,8 @@ class _AddDealScreenState extends State<AddDealScreen> {
   List<Map<String, dynamic>> _goods = [];
   List<Map<String, dynamic>> _persons = [];
 
+  bool isPendin = false;
+
   @override
   void initState() {
     super.initState();
@@ -159,7 +161,7 @@ class _AddDealScreenState extends State<AddDealScreen> {
           pricePerUnit: finalPricePerUnit,
           timestamp: DateTime.now(),
           date: _selectedDate,
-          isPending: false,
+          isPending: isPendin,
         );
 
         await _dealService.createDeal(deal);
@@ -445,23 +447,45 @@ class _AddDealScreenState extends State<AddDealScreen> {
 
               // Data
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                 children: [
-                  const Text('Data:'),
-                  const SizedBox(width: 16),
-                  TextButton(
-                    onPressed: () => _selectDate(context),
-                    child: Text(
-                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    ),
+                  Row(
+                    children: [
+                      const Text('Data:'),
+                      const SizedBox(width: 16),
+                      TextButton(
+                        onPressed: () => _selectDate(context),
+                        child: Text(
+                          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Switch(value: isPendin,
+                      activeTrackColor: theme.colorScheme.primary,
+                        onChanged:
+                          (value) {
+                        setState(() {
+                          isPendin = value;
+                        });
+                      },
+
+                      ),
+                      Text(isPendin==true ? 'Pending' : 'Confirmed',style: TextStyle(color: isPendin==true ? theme.colorScheme.primary : theme.colorScheme.onSecondary),),
+                    ],
                   ),
                 ],
               ),
+
               const SizedBox(height: 24),
 
               // Bottone di conferma
               ElevatedButton(
                 onPressed: _submitDeal,
-                child: const Text('Create Deal'),
+                child: const Text('Create Deal',),
               ),
             ],
           ),

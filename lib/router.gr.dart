@@ -17,7 +17,7 @@ class AddDealRoute extends PageRouteInfo<AddDealRouteArgs> {
     Key? key,
     required TxType dealType,
     VoidCallback? onDealCreated,
-    dynamic preSelectedWalletId,
+    String? preSelectedWalletId,
     List<PageRouteInfo>? children,
   }) : super(
          AddDealRoute.name,
@@ -60,7 +60,7 @@ class AddDealRouteArgs {
 
   final VoidCallback? onDealCreated;
 
-  final dynamic preSelectedWalletId;
+  final String? preSelectedWalletId;
 
   @override
   String toString() {
@@ -209,6 +209,22 @@ class StatsRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const StatsScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [TestSliverAppbar]
+class ToDeleteRoute extends PageRouteInfo<void> {
+  const ToDeleteRoute({List<PageRouteInfo>? children})
+    : super(ToDeleteRoute.name, initialChildren: children);
+
+  static const String name = 'ToDeleteRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const TestSliverAppbar();
     },
   );
 }

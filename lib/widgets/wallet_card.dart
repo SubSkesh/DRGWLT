@@ -1,66 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:drgwallet/models/wallet.dart';
 import 'package:drgwallet/services/wallet_service.dart';
+import 'package:drgwallet/providers/providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class WalletCard extends StatefulWidget {
+class WalletCard extends ConsumerWidget {  // Cambia in ConsumerWidget
   final Wallet wallet;
   final VoidCallback onTap;
-  final WalletService walletService;
 
   const WalletCard({
     super.key,
     required this.wallet,
     required this.onTap,
-    required this.walletService,
   });
 
   @override
-  State<WalletCard> createState() => _WalletCardState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dealsCountAsync = ref.watch(walletDealsCountProvider(wallet.id));
 
-class _WalletCardState extends State<WalletCard> {
-  late Future<int> _dealsCountFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _dealsCountFuture = widget.walletService.getWalletDealsCount(widget.wallet.id);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: ListTile(
         leading: const Icon(Icons.account_balance_wallet, size: 36),
         title: Text(
-          widget.wallet.name,
+          wallet.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.wallet.desc != null) Text(widget.wallet.desc!),
+            if (wallet.desc != null) Text(wallet.desc!),
             const SizedBox(height: 4),
-            FutureBuilder<int>(
-              future: _dealsCountFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Text('Caricamento deals...');
-                } else if (snapshot.hasError) {
-                  return const Text('Errore nel caricamento');
-                } else {
-                  return Text('Numero Deal: ${snapshot.data ?? 0}');
-                }
-              },
+            dealsCountAsync.when(
+              loading: () => const Text('Caricamento deals...'),
+              error: (error, stack) => const Text('Errore nel caricamento'),
+              data: (count) => Text('Numero Deal: $count'),
             ),
-            if (widget.wallet.totalSpent != null)
-              Text('Speso: €${widget.wallet.totalSpent!.toStringAsFixed(2)}'),
+            if (wallet.totalSpent != null)
+              Text('Speso: €${wallet.totalSpent!.toStringAsFixed(2)}'),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: widget.onTap,
+        onTap: onTap,
       ),
     );
   }
