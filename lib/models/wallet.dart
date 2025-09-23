@@ -151,7 +151,7 @@ class Wallet {
       id: id,
       ownerID: map['owner'] as String,
       name: map['name'] as String,
-      createdAt: map['createdAt'] as DateTime,
+      createdAt: (map['createdAt'] ).toDate(),
       desc: map['desc'] as String,
     );
   }

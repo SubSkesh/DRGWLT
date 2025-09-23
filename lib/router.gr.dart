@@ -11,6 +11,55 @@
 part of 'router.dart';
 
 /// generated route for
+/// [AddAgentScreen]
+class AddAgentRoute extends PageRouteInfo<AddAgentRouteArgs> {
+  AddAgentRoute({
+    Key? key,
+    PersonType? initialType,
+    List<PageRouteInfo>? children,
+  }) : super(
+         AddAgentRoute.name,
+         args: AddAgentRouteArgs(key: key, initialType: initialType),
+         initialChildren: children,
+       );
+
+  static const String name = 'AddAgentRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<AddAgentRouteArgs>(
+        orElse: () => const AddAgentRouteArgs(),
+      );
+      return AddAgentScreen(key: args.key, initialType: args.initialType);
+    },
+  );
+}
+
+class AddAgentRouteArgs {
+  const AddAgentRouteArgs({this.key, this.initialType});
+
+  final Key? key;
+
+  final PersonType? initialType;
+
+  @override
+  String toString() {
+    return 'AddAgentRouteArgs{key: $key, initialType: $initialType}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AddAgentRouteArgs) return false;
+    return key == other.key && initialType == other.initialType;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ initialType.hashCode;
+}
+
+/// generated route for
 /// [AddDealScreen]
 class AddDealRoute extends PageRouteInfo<AddDealRouteArgs> {
   AddDealRoute({
@@ -102,6 +151,22 @@ class AddWalletRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [AgentsScreen]
+class AgentsRoute extends PageRouteInfo<void> {
+  const AgentsRoute({List<PageRouteInfo>? children})
+    : super(AgentsRoute.name, initialChildren: children);
+
+  static const String name = 'AgentsRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const AgentsScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [AuthGate]
 class AuthGateRoute extends PageRouteInfo<void> {
   const AuthGateRoute({List<PageRouteInfo>? children})
@@ -147,6 +212,53 @@ class LoginRoute extends PageRouteInfo<void> {
       return const LoginScreen();
     },
   );
+}
+
+/// generated route for
+/// [ModifyWalletScreen]
+class ModifyWalletRoute extends PageRouteInfo<ModifyWalletRouteArgs> {
+  ModifyWalletRoute({
+    Key? key,
+    required String walletid,
+    List<PageRouteInfo>? children,
+  }) : super(
+         ModifyWalletRoute.name,
+         args: ModifyWalletRouteArgs(key: key, walletid: walletid),
+         initialChildren: children,
+       );
+
+  static const String name = 'ModifyWalletRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<ModifyWalletRouteArgs>();
+      return ModifyWalletScreen(key: args.key, walletid: args.walletid);
+    },
+  );
+}
+
+class ModifyWalletRouteArgs {
+  const ModifyWalletRouteArgs({this.key, required this.walletid});
+
+  final Key? key;
+
+  final String walletid;
+
+  @override
+  String toString() {
+    return 'ModifyWalletRouteArgs{key: $key, walletid: $walletid}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ModifyWalletRouteArgs) return false;
+    return key == other.key && walletid == other.walletid;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ walletid.hashCode;
 }
 
 /// generated route for

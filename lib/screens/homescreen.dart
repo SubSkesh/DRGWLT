@@ -3,8 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:drgwallet/router.dart';
 import 'package:drgwallet/models/deal.dart';
+import 'package:drgwallet/models/person.dart';
 import 'package:drgwallet/models/enum.dart';
-import 'package:drgwallet/models/wallet.dart';
+import 'package:drgwallet/models/wallet.dart';import 'package:drgwallet/models/person.dart';
 import 'package:drgwallet/widgets/custom_bottom_nav.dart';
 import 'package:drgwallet/widgets/deal_list_item.dart';
 import 'package:drgwallet/widgets/wallet_card.dart';
@@ -13,12 +14,17 @@ import 'package:drgwallet/theme/app_theme.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/services/wallet_service.dart';
+import 'package:drgwallet/services/person_service.dart';
 import 'package:drgwallet/widgets/radial_action.dart';
+import 'package:drgwallet/widgets/add_fab_agents.dart';
 import 'package:drgwallet/widgets/radial_context_menu.dart';
 import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:drgwallet/widgets/alarm_delete_wallet.dart';
+
+import '../widgets/person_card.dart';
 
 @RoutePage()
 class HomeScreen extends ConsumerStatefulWidget {
@@ -39,6 +45,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _createNewWallet() {
     context.router.push(AddWalletRoute());
+  }
+
+  void _addNewPerson() {
+    context.router.push(AddAgentRoute(initialType: null));
   }
 
   void _openWalletDetails(Wallet wallet) {
@@ -67,6 +77,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     Overlay.of(context).insert(overlayEntry);
   }
+  void _onAddAgentPressed(PersonType? personType) {
+    if (personType != null) {
+      context.router.push(AddAgentRoute(initialType: personType));}}
+
+      // Funzione per costruire il FAB in base al tab selezionato
+  Widget _buildFAB(int selectedIndex) {
+    switch (selectedIndex) {
+      case 0: // Tab Wallet
+        return AddFloatingButton(onAddPressed: _onAddPressed);
+      case 1: // Tab Agents
+        return AddAgentsFloatingButton(onAddPressed: _onAddAgentPressed);
+      case 2: // Tab Goods
+      // Se hai bisogno di un FAB specifico per Goods, crealo qui
+        return AddFloatingButton(onAddPressed: _onAddPressed);
+      case 3: // Tab Stats
+      // Se hai bisogno di un FAB specifico per Stats, crealo qui
+        return AddFloatingButton(onAddPressed: _onAddPressed);
+      default:
+        return AddFloatingButton(onAddPressed: _onAddPressed);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,8 +122,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: CustomBottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: _onItemTapped,
+        actions: [  BottomNavigationBarItem(
+          icon: Icon(Icons.account_balance_wallet),
+          label: 'Wallet',
+        ),
+          BottomNavigationBarItem(
+            icon: ImageIcon(Image.asset('assets/icons/discussion_meeting_people_icon.png').image),//Image.asset('assets/icons/discussion_meeting_people_icon.png',),
+            label: 'Agents',
+          ),
+          BottomNavigationBarItem(
+            icon: ImageIcon(Image.asset('assets/icons/exchange_goods_icon.png',).image),
+            label: 'Goods',
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Stats',
+          ),],
       ),
-      floatingActionButton: AddFloatingButton(onAddPressed: _onAddPressed),
+      floatingActionButton: _buildFAB(selectedIndex),//AddFloatingButton(onAddPressed: _onAddPressed),
     );
   }
 
@@ -101,44 +149,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 0:
         return _buildWalletsTab();
       case 1:
-        return _buildDealsTab();
+        return _buildAgentsTab();
       case 2:
         return _buildStatsTab();
       default:
-        return _buildWalletsTab();
+        return _test();
     }
-  }
-
-  Widget _buildDealsTab() {
-    final theme = Theme.of(context);
-    final dealsAsync = ref.watch(userDealsProvider);
-
-    return dealsAsync.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: theme.colorScheme.primary),
-      ),
-      error: (error, stack) => Center(
-        child: Text('Errore: $error', style: theme.textTheme.bodyLarge),
-      ),
-      data: (deals) {
-        if (deals.isEmpty) {
-          return Center(
-            child: Text('Nessun deal trovato', style: theme.textTheme.bodyLarge),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: deals.length,
-          itemBuilder: (context, index) {
-            final deal = deals[index];
-            return DealListItem(
-              deal: deal,
-              onTap: () => _openDealDetails(deal),
-            );
-          },
-        );
-      },
-    );
   }
 
   Widget _buildWalletsTab() {
@@ -216,11 +232,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   drag_context_menu.ContextAction(
                     icon: Icons.edit,
                     label: 'Modifica',
-                    color: Colors.blue,
+                    color:theme.colorScheme.primary,
                   ),
                   drag_context_menu.ContextAction(
                     icon: Icons.copy,
                     label: 'Duplica',
+                    color:theme.colorScheme.primary,
                   ),
                   drag_context_menu.ContextAction(
                     icon: Icons.delete,
@@ -233,19 +250,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   details.globalPosition,
                   actions,
-                  applyOnHover: false, // Cambia a true se vuoi che si attivi subito
-                );
+                  'homescreen',
+                  mode: drag_context_menu.MenuOpenMode.dragToSelect,);
 
                 if (selectedIndex != null) {
                   switch (selectedIndex) {
                     case 0:
-                      print('Modifica wallet');
+                      context.router.push(ModifyWalletRoute(walletid: wallet.id));
                       break;
                     case 1:
                       print('Duplica wallet');
                       break;
                     case 2:
-                      print('Elimina wallet');
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => WalletAlarmDelete(
+                          walletName: wallet.name,
+                          onConfirm: () async {
+                            final walletService = ref.read(walletServiceProvider); // ✅ prendi l'istanza dal provider
+                            await walletService.deleteWallet(wallet.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Wallet eliminato con successo")),
+                            );
+                          },
+                        ),
+                      );
                       break;
                   }
                 }
@@ -261,10 +290,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildAgentsTab() {
+    final theme = Theme.of(context);
+    final PersonService _personService = PersonService();
+    final personsAsync = ref.watch(personsProvider);
+
+    PersonType _filterType = PersonType.anon;
+    return  personsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Errore: $error')),
+      data: (persons) {
+        // Filtra le persone in base al tipo selezionato
+        final filteredPersons = _filterType == PersonType.anon
+            ? persons
+            : persons.where((p) => p.personType == _filterType).toList();
+
+        if (filteredPersons.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                // const SizedBox(height: 16),
+                Text(
+                  _filterType == PersonType.anon
+                      ? 'No agents found'
+                      : _filterType == PersonType.supplier
+                      ? 'No supplier agents found'//in inglese sarebbe Supplier no agents found
+                      : 'No customer agents found',
+                  style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => _addNewPerson(),
+                  child: const Text('Add new agent'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredPersons.length,
+          itemBuilder: (context, index) {
+            final person = filteredPersons[index];
+            return personCard(person: person,);
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildStatsTab() {
     final theme = Theme.of(context);
     return Center(
       child: Text('Statistiche - In sviluppo', style: theme.textTheme.bodyLarge),
     );
   }
+  Widget _test(){
+    final theme = Theme.of(context);
+    return CustomScrollView(
+      slivers: [SliverAppBar( expandedHeight: 150.0,
+      floating: true,
+      backgroundColor: theme.colorScheme.primary,
+      pinned: false,
+      leading: Image.asset('assets/icons/savings.png'),
+
+      iconTheme: theme.iconTheme,
+      flexibleSpace: const FlexibleSpaceBar(
+        title: Text('Available seats'),
+      ),
+
+     ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (BuildContext context, int index) {
+              return ListTile(
+                title: Text('Item #$index'),
+              );
+            },
+            childCount: 50, // Number of items in the list
+          ),
+        ),
+        SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+          delegate: SliverChildBuilderDelegate(
+                (BuildContext context, int index) => Card(child: Center(child: Text('Grid Item $index'))),
+            childCount: 35, // Number of items in the grid
+          ),
+        ),
+      ]
+    );
+
+  }
 }
+
+

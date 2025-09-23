@@ -150,7 +150,7 @@ class _AddDealScreenState extends State<AddDealScreen> {
         }
 
         final deal = Deal(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: DateTime.now().millisecondsSinceEpoch.toString(),//crea un nuovo id univoco per il deal in base alla data e alle ore
           walletId: _selectedWalletId!,
           goodId: _selectedGoodId ?? '',
           personId: _selectedPersonId,

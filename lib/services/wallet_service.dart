@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drgwallet/models/wallet.dart';
 import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/utils/wallet_calculator.dart';
+import 'package:drgwallet/models/good.dart';
+import 'package:async/async.dart';
 
 class WalletService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -34,6 +36,7 @@ class WalletService {
     );
   }
 
+
   /// Restituisce tutti i wallet di un utente (senza metriche calcolate)
   Stream<List<Wallet>> getUserWallets() {
     final user = _auth.currentUser;
@@ -59,6 +62,25 @@ class WalletService {
       }
     }).toList());
   }
+Future<Wallet> getWallet(String walletId) async {
+    final walletDoc = await _firestore.collection('wallets').doc(walletId).get();
+    if (!walletDoc.exists) {
+      throw Exception('Wallet non trovato');
+    }
+    final data = walletDoc.data();
+    if (data == null) {
+      throw Exception('Dati del wallet nulli');
+    }
+    return Wallet(
+      id: walletDoc.id,
+      ownerID: data['owner'] as String,
+      name: data['name'] as String,
+      desc: data['desc'] as String?,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),);
+
+}
+
+
   Stream<Wallet> getWalletStream(String walletId) {
     return _firestore.collection('wallets').doc(walletId).snapshots().map((snapshot) {
       if (!snapshot.exists) {
@@ -108,6 +130,51 @@ class WalletService {
         throw Exception('Dati del deal nulli');
       }
     }).toList();
+  }
+  Stream<Wallet> getWalletWithStatsStream(String walletId) {
+    // 1. Stream per il wallet base (dati grezzi da Firestore)
+    //    Usiamo il tuo metodo esistente `getWalletStream` che gestisce già Wallet.fromMap
+    final Stream<Wallet> walletBaseStream = getWalletStream(walletId);
+
+    // 2. Stream per i deals associati a quel wallet
+    //    Usiamo il tuo metodo esistente `getWalletDealsStream`
+    final Stream<List<Deal>> walletDealsStream = getWalletDealsStream(walletId);
+
+    // 3. Gestione dei Goods (IMPORTANTE per WalletCalculator)
+    //    Questa è la parte che richiede una decisione da parte tua.
+    //    Opzione A: Non hai un sistema per i Goods o usi i fallback.
+    final Stream<List<Good>> goodsStream = Stream.value(const <Good>[]); // Emette una lista vuota una sola volta
+
+    //    Opzione B: Hai un modo per ottenere i goods (es. da un altro metodo o stream nel servizio).
+    //    Sostituisci la riga sopra con il tuo vero stream di goods, ad esempio:
+    //    final Stream<List<Good>> goodsStream = _getAllGoodsStream(); // Metodo ipotetico nel servizio
+
+    // 4. Combina gli stream.
+    //    StreamZip attende che tutti gli stream forniti emettano almeno un valore,
+    //    poi emette una lista contenente l'ultimo valore emesso da ciascuno.
+    //    Successivamente, emette una nuova lista ogni volta che *qualsiasi* degli stream sorgente emette.
+    return StreamZip([
+      walletBaseStream,
+      walletDealsStream,
+      goodsStream, // Stream dei goods (o la lista vuota)
+    ]).map((data) {
+      // data[0] è l'emissione di walletBaseStream (un Wallet)
+      // data[1] è l'emissione di walletDealsStream (una List<Deal>)
+      // data[2] è l'emissione di goodsStream (una List<Good>)
+
+      final Wallet walletBase = data[0] as Wallet;
+      final List<Deal> deals = data[1] as List<Deal>;
+      final List<Good> goods = data[2] as List<Good>;
+
+      // Applica la logica di calcolo per arricchire il wallet
+      final Wallet enrichedWallet = WalletCalculator.enrichWithCalculations(
+        wallet: walletBase,
+        deals: deals,
+        goods: goods, // Passa i goods qui
+      );
+
+      return enrichedWallet;
+    });
   }
 
   /// Carica un wallet completo con statistiche calcolate per un periodo specifico

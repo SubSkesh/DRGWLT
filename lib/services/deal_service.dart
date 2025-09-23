@@ -11,8 +11,32 @@ class DealService {
   Future<void> createDeal(Deal deal) async {
     await _firestore.collection('deals').doc(deal.id).set(deal.toMap());
   }
+  Future<void> cloneDeal(Deal deal) async {
+    final clone = deal.copyWith(id: null);
+    await createDeal(clone);
+  }
+// // 1. Crea un nuovo deal (Alternativa Semplificata)
+//   Future<void> createDeal(Deal deal) async {
+//     if (deal.id == null) {
+//       // Se l'ID è nullo, crea un nuovo documento e Firestore genererà l'ID.
+//       // Poi prendi quell'ID e salvalo nell'oggetto deal prima di chiamare toMap(),
+//       // oppure assicurati che toMap() non includa un campo 'id' se deve essere autogenerato.
+//       // L'opzione più pulita è spesso aggiornare l'oggetto deal.
+//       final newDocRef = _firestore.collection('deals').doc(); // Genera riferimento con nuovo ID
+//       // Crea una versione del deal che include il nuovo ID per il salvataggio
+//       final dealWithId = deal.copyWith(id: newDocRef.id);
+//       await newDocRef.set(dealWithId.toMap());
+//     } else {
+//       // Se l'ID è fornito, usa quello per creare o sovrascrivere.
+//       await _firestore.collection('deals').doc(deal.id).set(deal.toMap());
+//     }
+//   }
+//
+// // cloneDeal rimane invariato, ora funzionerà correttamente
+//   Future<void> cloneDeal(Deal deal) async {
+//     final clone = deal.copyWith(id: null);
 
-  // 2. Leggi tutti i deal di un utente (stream in tempo reale)
+    // 2. Leggi tutti i deal di un utente (stream in tempo reale)
   Stream<List<Deal>> getUserDeals(String userId) {
     return _firestore
         .collection('deals')
@@ -30,6 +54,7 @@ class DealService {
     })
         .toList());
   }
+
 
   // 3. Filtra deals per periodo
   Stream<List<Deal>> getUserDealsByDateRange(
@@ -178,4 +203,5 @@ class DealService {
     })
         .toList());
   }
+
 }

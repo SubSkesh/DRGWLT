@@ -4,6 +4,7 @@ import 'package:drgwallet/router.dart';
 import 'package:drgwallet/models/wallet.dart';
 import 'package:drgwallet/services/wallet_service.dart';
 import 'package:drgwallet/services/deal_service.dart';
+import 'package:drgwallet/widgets/deal_list_item.dart';
 import 'package:drgwallet/utils/wallet_calculator.dart';
 import 'package:flutter/material.dart';
 import 'package:drgwallet/models/deal.dart';
@@ -11,8 +12,10 @@ import 'package:drgwallet/utils/deal_calculator.dart';
 import 'package:drgwallet/theme/app_theme.dart';
 import'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/widgets/add_fab_deal.dart';
-import 'package:drgwallet/providers/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drgwallet/providers/providers.dart';
+import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
+
 
 @RoutePage()
 class WalletDetailScreen extends ConsumerStatefulWidget {
@@ -28,16 +31,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
   final WalletService _walletService = WalletService();
   final DealService _dealService = DealService();
 
-  // UniqueKey _refreshKey = UniqueKey(); // VARIABILE PER REFRESH DEL LISTVIEW BUILDER
-  Wallet? _wallet;
-  List<Deal> _deals = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWalletData();
-  }
+  UniqueKey _refreshKey = UniqueKey();
 
   void _onAddPressed(TxType? dealType) {
     if (dealType != null) {
@@ -45,163 +39,155 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
         AddDealRoute(
           dealType: dealType,
           preSelectedWalletId: widget.walletId,
-          // ← Passa l'ID del wallet corrente
-          onDealCreated: _loadWalletData, // Passa direttamente la funzione
-
-
         ),
       );
     }
   }
-
-  Future<void> _loadWalletData() async {
-    try {
-      final wallet = await _walletService.getWalletWithStats(widget.walletId);
-      final deals = await _walletService.getWalletDeals(widget.walletId);
-
-      setState(() {
-        _wallet = wallet;
-        _deals = deals;
-        _isLoading = false;
-      });
-    } catch (e) {
-      // Gestisci errore
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-  //TODO:AGGIUNGERE òA RPTTA èER IL DETTAGLIO DEAL
-  // void _dealDetail(String dealID) {
-  //   context.router.push(
-  //     const DealDetailRoute(dealID),
-  //   );
-  // }
-
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_wallet == null) {
-      return const Scaffold(
-        body: Center(child: Text('Wallet non trovato')),
-      );
-    }
+    final walletAsync = ref.watch(walletDetailsWithStatsStreamProvider(widget.walletId));
+    final dealsAsync = ref.watch(walletDealsProvider(widget.walletId  ));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _wallet!.name,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Game',
+        title: walletAsync.when(
+          data: (wallet) => Text(
+            wallet.name,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Game',
+            ),
           ),
+          loading: () => const Text("Caricamento..."),
+          error: (e, _) => Text("Errore"),
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _wallet!.desc ?? '',
-              style: Theme
-                  .of(context)
-                  .textTheme
-                  .bodyLarge,
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildStatRow(
-                        'Total Deals', _wallet!.totalDeals?.toString() ?? '0'),
-                    _buildStatRow('Total Spent',
-                        '€${_wallet!.totalSpent?.toStringAsFixed(2) ??
-                            "0.00"}'),
-                    _buildStatRow('Totale Guadagnato',
-                        '€${_wallet!.totalEarned?.toStringAsFixed(2) ??
-                            "0.00"}'),
-                    _buildStatRow('Profitto Netto',
-                        '€${_wallet!.netProfit?.toStringAsFixed(2) ?? "0.00"}'),
-                  ],
+        child: walletAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, st) => Center(child: Text("Errore: $err")),
+          data: (wallet) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(wallet.desc ?? '', style: theme.textTheme.bodyLarge),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildStatRow('Total Deals', wallet.totalDeals?.toString() ?? '0'),
+                      _buildStatRow('Total Spent',
+                          '€${wallet.totalSpent?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildStatRow('Totale Guadagnato',
+                          '€${wallet.totalEarned?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildStatRow('Profitto Netto',
+                          '€${wallet.netProfit?.toStringAsFixed(2) ?? "0.00"}'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Last Deals',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: _deals.isEmpty
-                  ? const Center(child: Text('Nessun deal trovato'))
-                  : ListView(
-                children: ListTile.divideTiles(
-                  context: context, // Aggiunto context qui, spesso richiesto
-                  color: theme.colorScheme.primary,
-                  tiles: _deals.map(
-                        (deal) =>
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:theme.colorScheme.secondary, // Colore per SELL (o un altro tipo)
-                            child: Icon(
-                              deal.type == TxType.sale
-                                  ? Icons.shopping_cart // Icona per BUY
-                                  : Icons.sell, // Icona per SELL
-                              color: Colors.white, // Colore dell'icona, se necessario
-                            ),
-                          ),
-                          title: Text(
-                            deal.type
-                                .toString()
-                                .split('.')
-                                .last,
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                          subtitle: Text(
-                              '${deal.amount} x €${deal.pricePerUnit
-                                  .toStringAsFixed(2)}'),
-
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('${deal.date.day}/${deal.date.month}/${deal.date.year}'),
-                              Text('€${deal.total.toStringAsFixed(2)}'),
-                            ],
-                          ),
-                       // onTap: _dealDetail(walletid,deal.id) ,
-                        ),
-                  ),
-                ).toList(),
+              const SizedBox(height: 16),
+              const Text(
+                'Last Deals',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              // : ListView.builder(
-              //     itemCount: _deals.length,
-              //     itemBuilder: (context, index) {
-              //       final deal = _deals[index];
-              //       return ListTile(
-              //         title: Text(
-              //           deal.type.toString().split('.').last,
-              //           style: theme.textTheme.bodyLarge,
-              //         ),
-              //         subtitle: Text(
-              //             '${deal.amount} x €${deal.pricePerUnit.toStringAsFixed(2)}'),
-              //         trailing: Text('€${deal.total.toStringAsFixed(2)}'),
-              //       );
-              //     },
-              //   ),
-            ),
-          ],
+              const SizedBox(height: 8),
+
+              // LISTA DEALS
+              Expanded(
+                child: dealsAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, st) => Center(child: Text("Errore: $err")),
+                  data: (deals) {
+                    if (deals.isEmpty) {
+                      return const Center(child: Text('Nessun deal trovato'));
+                    }
+                    return ListView.builder(
+                      key: _refreshKey,
+                      itemCount: deals.length,
+                      itemBuilder: (context, index) {
+                        final deal = deals[index];
+                        return GestureDetector(
+                          onLongPressStart: (details) async {
+                            final actions = [
+                              drag_context_menu.ContextAction(
+                                icon: Icons.edit,
+                                label: 'Modifica',
+                                color: theme.colorScheme.primary,
+                              ),
+                              drag_context_menu.ContextAction(
+                                icon: Icons.copy,
+                                  label: 'Clone',
+                                  color: theme.colorScheme.primary,
+
+                              ),
+                              drag_context_menu.ContextAction(
+                                icon: deal.isPending
+                                    ? Icons.check_circle
+                                    : Icons.pending_actions,
+                                label: deal.isPending
+                                    ? 'Not Pending'
+                                    : 'Pending',
+                                color: deal.isPending
+                                    ? theme.colorScheme.primary
+                                    : Colors.orange
+                              ),
+                              drag_context_menu.ContextAction(
+                                icon: Icons.delete,
+                                label: 'Elimina',
+                                color: Colors.red,
+                              ),
+                            ];
+
+                            final selectedIndex =
+                            await drag_context_menu.showDragContextMenu(
+                              context,
+                              details.globalPosition,
+                              actions,
+                              'walletdetailscreen',
+                              mode: drag_context_menu.MenuOpenMode.dragToSelect,
+                            );
+
+                            if (selectedIndex != null) {
+                              switch (selectedIndex) {
+                                case 0:
+                                  print('Modifica deal: ${deal.id}');
+                                  break;
+                                case 1:
+                                  print('Clone deal: ${deal.id}');
+                                  await
+                                  _dealService.createDeal(deal.copyWith(date: DateTime.now()x,id: DateTime.now().millisecondsSinceEpoch.toString()));
+                                case 2:
+                                  final updateDeal =
+                                  deal.copyWith(isPending: !deal.isPending);
+                                  await _dealService.updateDeal(updateDeal);
+                                  break;
+                                case 3:
+                                  print('Elimina deal: ${deal.id}');
+                                  // await _dealService.deleteDeal(deal.id!);
+                                  break;
+                              }
+                            }
+                          },
+                          child: DealListItem(
+                            deal: deal,
+                          //  onTap: () {
+                              // TODO: navigazione dettaglio deal
+
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: Padding(
@@ -218,7 +204,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: theme.textTheme.bodyLarge,),
+          Text(label, style: theme.textTheme.bodyLarge),
           Text(value),
         ],
       ),

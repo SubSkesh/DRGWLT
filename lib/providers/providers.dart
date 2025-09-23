@@ -1,10 +1,11 @@
 import 'package:drgwallet/services/firebase_authservice.dart';
 import 'package:drgwallet/services/wallet_service.dart';
 import 'package:drgwallet/services/deal_service.dart';
+import 'package:drgwallet/services/person_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drgwallet/models/deal.dart';
-import 'package:drgwallet/models/wallet.dart';
+import 'package:drgwallet/models/wallet.dart';import 'package:drgwallet/models/person.dart';
 part 'providers.g.dart';
 
 @riverpod
@@ -15,6 +16,9 @@ WalletService walletService( ref) => WalletService();
 
 @riverpod
 DealService dealService( ref) => DealService();
+
+@riverpod
+PersonService personService( ref) => PersonService();
 
 @riverpod
 Stream<User?> authStateChanges( ref) {
@@ -35,6 +39,25 @@ Stream<List<Wallet>> userWallets( ref) {
 }
 
 @riverpod
+Stream<Wallet> walletDetails( ref, String walletId) {
+  final walletService = ref.watch(walletServiceProvider);
+  return walletService.getWalletStream(walletId);
+}
+@riverpod
+Stream<Wallet> walletDetailsWithStatsStream(ref,String walletId) {
+  final walletService = ref.watch(walletServiceProvider);
+  return walletService.getWalletWithStatsStream(walletId);
+}
+
+
+
+@riverpod
+Stream<List<Deal>> walletDeals( ref, String walletId) {
+  final walletService = ref.watch(walletServiceProvider);
+  return walletService.getWalletDealsStream(walletId);
+}
+
+@riverpod
 class SelectedTab extends _$SelectedTab {
   @override
   int build() => 0;
@@ -49,13 +72,23 @@ Stream<int> walletDealsCount( ref, String walletId) {
   return walletService.getWalletDealsCount(walletId);
 }
 
-
 @riverpod
 class MenuOpen extends _$MenuOpen {
   @override
   bool build() => false;
 
-  void setOpen(bool isOpen) {
-    state = isOpen;
-  }
+  void open() => state = true;
+  void close() => state = false;
+}
+
+@riverpod
+Stream<List<Person>> persons( ref) {
+  final personService = ref.watch(personServiceProvider);
+  return personService.getUserPersons();
+}
+
+@riverpod
+Stream<Person> person( ref, String personId) {
+  final personService = ref.watch(personServiceProvider);
+  return personService.getPersonStream(personId);
 }

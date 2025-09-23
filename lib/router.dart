@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:drgwallet/screens/modify_wallet_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:drgwallet/screens/homescreen.dart';
 import 'package:drgwallet/screens/loginscreen.dart';
@@ -13,6 +14,11 @@ import 'package:drgwallet/screens/stats_screen.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/screens/add_wallet_screen.dart';
 import 'package:drgwallet/screens/todeletescreen.dart';
+import 'package:drgwallet/screens/agents_screen.dart';
+import 'package:drgwallet/screens/add_agent_screen.dart';
+
+import 'models/person.dart';
+
 
 
 part 'router.gr.dart'; // Questo sarà generato da build_runner
@@ -30,10 +36,14 @@ class AppRouter extends RootStackRouter {
     // Nuove route aggiunte
     AutoRoute(page: AddDealRoute.page),
     AutoRoute(page: WalletDetailRoute.page),
+    AutoRoute(page: ModifyWalletRoute.page),
+
     AutoRoute(page: ProfileRoute.page),
     AutoRoute(page: StatsRoute.page),
     AutoRoute(page: AddWalletRoute.page),
     //da eliminare
     AutoRoute(page: ToDeleteRoute.page),
+    AutoRoute(page: AgentsRoute.page),
+    AutoRoute(page: AddAgentRoute.page),
   ];
 }

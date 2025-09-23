@@ -4,6 +4,8 @@ import 'package:drgwallet/models/person.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/models/enum.dart';
+import 'package:drgwallet/models/person.dart';
+
 
 class PersonService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,7 +14,10 @@ class PersonService {
   /// Crea una nuova persona
   Future<Person> createPerson({
     required String name,
-    required bool isSupplier,
+
+    required String ownerId,
+    required PersonType personType,
+
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Utente non autenticato');
@@ -23,14 +28,17 @@ class PersonService {
     final person = Person(
       id: personRef.id,
       name: name,
-      isSupplier: isSupplier,
+      personType: personType,
+
+      ownerId: user.uid,
+
       createdAt: now,
       lastUpdated: now,
     );
 
     await personRef.set({
       ...person.toMap(),
-      'ownerId': user.uid, // Aggiungi ownerId per sicurezza
+
     });
 
     return person;
@@ -100,9 +108,12 @@ class PersonService {
 
       await personRef.update({
         'name': person.name,
-        'isSupplier': person.isSupplier,
+        'isSupplier': person.personType,
         'dealIds': person.dealIds,
         'lastUpdated': FieldValue.serverTimestamp(),
+        'photoUrl': person.photoUrl,
+        'personType': person.personType,
+
       });
     } else {
       throw Exception('Dati della persona nulli o tipo non valido');
@@ -199,13 +210,27 @@ class PersonService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Utente non autenticato');
 
+
     Query queryBuilder = _firestore
         .collection('persons')
         .where('ownerId', isEqualTo: user.uid)
         .orderBy('name');
+    final searchfilter;
+
+
+
 
     if (isSupplier != null) {
-      queryBuilder = queryBuilder.where('isSupplier', isEqualTo: isSupplier);
+      if (isSupplier)
+      {
+        searchfilter=PersonType.supplier;
+      }
+      else
+        {
+        searchfilter=PersonType.buyer;
+      }
+
+      queryBuilder = queryBuilder.where('personType', isEqualTo: searchfilter);
     }
 
     return queryBuilder

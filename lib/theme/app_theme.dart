@@ -57,6 +57,11 @@ class AppTheme {
         ),
       ),
       iconTheme: const IconThemeData(color: Colors.white),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1F1F1F),
+        selectedItemColor: Color(0xFFE3B873),
+        unselectedItemColor: Colors.white60,)
+
     );
   }
 }

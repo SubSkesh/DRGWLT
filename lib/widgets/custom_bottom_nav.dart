@@ -1,35 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:drgwallet/theme/app_theme.dart';
+
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final List<BottomNavigationBarItem> actions;
 
   const CustomBottomNavigationBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.actions,
   });
+
 
   @override
   Widget build(BuildContext context) {
+    final theme= Theme.of(context);
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: onTap,
-      items: const [
-
-        BottomNavigationBarItem(
-          icon: Icon(Icons.account_balance_wallet),
-          label: 'Wallet',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.list),
-          label: 'Deals',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Stats',
-        ),
-      ],
+      items:
+        this.actions,
     );
   }
 }

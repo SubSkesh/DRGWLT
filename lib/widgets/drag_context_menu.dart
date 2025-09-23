@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drgwallet/providers/providers.dart';
 
 class ContextAction {
   final IconData icon;
@@ -10,95 +12,91 @@ class ContextAction {
     required this.icon,
     required this.label,
     this.color,
+
   });
 }
 
-// Track if a menu is currently open
-bool _isMenuOpen = false;
+enum MenuOpenMode { dragToSelect, tapToSelect }
+enum MenuScreenSource {homescreen,
+walletdetailscreen,}
 
 Future<int?> showDragContextMenu(
     BuildContext context,
-    Offset globalPosition,
-    List<ContextAction> actions, {
-      bool applyOnHover = true,
-    }) async
-{
+    Offset globalPosition,//rapresenta la posizione globale della finestra in cui viene mostrato il menu
+    List<ContextAction> actions,
+    String menuScreenSource,
+    {
+      MenuOpenMode mode = MenuOpenMode.dragToSelect,
+    }) async {
+  final container = ProviderScope.containerOf(context);
+  final menuOpen = container.read(menuOpenProvider);
+  if (menuOpen) return null;
+  container.read(menuOpenProvider.notifier).open();
 
-
-  assert(actions.isNotEmpty);
-
-  // Ottieni il container dal context
-  final container = ProviderScope.containerOf(context, listen: false);
-
-  // Prevent multiple menus from opening
-  if (container.read(menuOpenProvider)) return null;
-  container.read(menuOpenProvider.notifier).setOpen(true);
-
+  final resultCompleter = Completer<int?>();
   final overlay = Overlay.of(context);
   if (overlay == null) {
-    container.read(menuOpenProvider.notifier).setOpen(false);
+    container.read(menuOpenProvider.notifier).close();
     return null;
   }
 
   final screen = MediaQuery.of(context).size;
-  final itemSize = 72.0;
-  final spacing = 8.0;
-  final menuWidth = actions.length * itemSize + (actions.length - 1) * spacing;
-  const edgePadding = 16.0;
 
-  // Calculate position with bounds checking
-  double left = globalPosition.dx - menuWidth / 2;
-  if (left < edgePadding) left = edgePadding;
-  if (left + menuWidth > screen.width - edgePadding) {
-    left = screen.width - edgePadding - menuWidth;
-  }
+  // --- CONFIG ---
 
-  double top = globalPosition.dy - itemSize - 16;
-  if (top < edgePadding) top = globalPosition.dy + 16;
-  if (top + itemSize * 1.5 > screen.height - edgePadding) {
-    top = globalPosition.dy - itemSize * 1.5 - 16;
-  }
 
-  top = top.clamp(edgePadding, screen.height - edgePadding - itemSize * 1.5);
-  left = left.clamp(edgePadding, screen.width - edgePadding - menuWidth);
+
+   const double itemSize = 72.0;
+
+  const double spacing = 8.0;
+  const double horizontalPadding = 12.0;
+  const double verticalPadding = 12.0;
+  const double edgePadding = 16.0;
+  const double marginFromFinger = 8.0;
+
+  final int n = actions.length;
+  final double desiredMenuWidth = n * itemSize + (n - 1) * spacing;
+  final double maxMenuWidth = screen.width - edgePadding * 2;// * 2 perché sono due lati dell'immagine
+  final double actualMenuWidth = desiredMenuWidth.clamp(100.0, maxMenuWidth);
+
+  double left = globalPosition.dx - actualMenuWidth / 2;
+  left = left.clamp(edgePadding, screen.width - edgePadding - actualMenuWidth);// centra il menu rispetto al tocco, posizionandolo in modo che il tocco sia al centro del menu.
+
+  final double menuHeight = itemSize + verticalPadding * 2;
+  double top = globalPosition.dy - menuHeight - marginFromFinger;
+  if (top < edgePadding + kToolbarHeight) top = globalPosition.dy + marginFromFinger;
+  top = top.clamp(edgePadding, screen.height - edgePadding - menuHeight);
+
+  final double innerWidth = actualMenuWidth - horizontalPadding * 2;
+  final double totalSpacing = (n - 1) * spacing;
+  final double slotWidth = (innerWidth - totalSpacing) / n;
+  final double step = slotWidth + spacing;
 
   final selected = ValueNotifier<int?>(null);
-  final completer = Completer<int?>();
   late OverlayEntry entry;
-  bool _isRemoved = false;
+  bool removed = false;
 
-  void _safeRemove() {
-    if (!_isRemoved && entry.mounted) {
-      _isRemoved = true;
-      container.read(menuOpenProvider.notifier).setOpen(false); // Reset the flag
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (entry.mounted) {
-          entry.remove();
-        }
-      });
-    }
+  void _safeRemove([int? sel]) {
+    if (removed) return;
+    removed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (entry.mounted) entry.remove();
+    });
+    if (!resultCompleter.isCompleted) resultCompleter.complete(sel);
+    container.read(menuOpenProvider.notifier).close();
   }
 
   entry = OverlayEntry(builder: (ctx) {
     final theme = Theme.of(ctx);
-    final actualMenuWidth = menuWidth.clamp(100.0, screen.width - edgePadding * 2);
 
     return Stack(
       children: [
-        // Semi-transparent overlay to capture taps outside the menu
         Positioned.fill(
-          child: Container(
-            color: Colors.transparent,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                _safeRemove();
-                if (!completer.isCompleted) completer.complete(null);
-              },
-            ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _safeRemove(),
           ),
         ),
-        // The context menu
         Positioned(
           left: left,
           top: top,
@@ -107,96 +105,97 @@ Future<int?> showDragContextMenu(
             borderRadius: BorderRadius.circular(14),
             color: theme.cardColor,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.primary, width: 2),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
               constraints: BoxConstraints(
                 minWidth: actualMenuWidth,
-                maxWidth: screen.width - edgePadding * 2,
+                maxWidth: actualMenuWidth,
               ),
               child: ValueListenableBuilder<int?>(
                 valueListenable: selected,
-                builder: (_, sel, __) {
+                builder: (_, sel,__) {
                   return GestureDetector(
+                    behavior: HitTestBehavior.translucent,
                     onPanUpdate: (details) {
-                      final localX = details.localPosition.dx;
-                      int? newIndex;
+                      if (mode != MenuOpenMode.dragToSelect) return;
+                      final local = details.localPosition;
 
-                      if (localX >= 0 && localX <= actualMenuWidth) {
-                        final index = (localX / (itemSize + spacing)).floor();
-                        if (index >= 0 && index < actions.length) newIndex = index;
+                      int? newIndex;
+                      for (int i = 0; i < n; i++) {
+                        final double cx = step * i + slotWidth / 2;
+                        final double cy = itemSize / 2;
+                        final double dx = local.dx - cx;
+                        final double dy = local.dy - cy;
+                        final double rx = slotWidth / 2;
+                        final double ry = itemSize / 2;
+                        if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1) {
+                          newIndex = i;
+                          break;
+                        }
                       }
 
                       if (newIndex != selected.value) {
                         selected.value = newIndex;
-                        HapticFeedback.selectionClick();
-                        if (applyOnHover && newIndex != null) {
-                          _safeRemove();
-                          if (!completer.isCompleted) completer.complete(newIndex);
-                        }
+                        if (newIndex != null) HapticFeedback.selectionClick();
                       }
                     },
-                    onPanEnd: (details) {
-                      if (!applyOnHover) {
-                        final sel = selected.value;
-                        _safeRemove();
-                        if (!completer.isCompleted) completer.complete(sel);
-                      }
-                    },
-                    onPanCancel: () {
-                      _safeRemove();
-                      if (!completer.isCompleted) completer.complete(null);
+                    onPanEnd: (_) {
+                      if (mode != MenuOpenMode.dragToSelect) return;
+                      _safeRemove(selected.value);
                     },
                     onTapUp: (details) {
-                      final localX = details.localPosition.dx;
-                      int? sel;
-
-                      if (localX >= 0 && localX <= actualMenuWidth) {
-                        final index = (localX / (itemSize + spacing)).floor();
-                        if (index >= 0 && index < actions.length) sel = index;
+                      final local = details.localPosition;
+                      int? selIndex;
+                      for (int i = 0; i < n; i++) {
+                        final double cx = step * i + slotWidth / 2;
+                        final double cy = itemSize / 2;
+                        final double dx = local.dx - cx;
+                        final double dy = local.dy - cy;
+                        final double rx = slotWidth / 2;
+                        final double ry = itemSize / 2;
+                        if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1) {
+                          selIndex = i;
+                          break;
+                        }
                       }
-
-                      _safeRemove();
-                      if (!completer.isCompleted) completer.complete(sel);
+                      _safeRemove(selIndex);
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(actions.length, (i) {
+                      children: List.generate(n, (i) {
                         final a = actions[i];
                         final highlighted = sel == i;
-
-                        return Flexible(
+                        return Expanded(
                           child: Padding(
-                            padding: EdgeInsets.only(right: i == actions.length - 1 ? 0 : spacing),
+                            padding: EdgeInsets.only(right: i == n - 1 ? 0 : spacing),
                             child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 120),
-                              curve: Curves.easeOut,
-                              height: highlighted ? itemSize * 1.12 : itemSize,
+                              duration: const Duration(milliseconds: 170),
+                              curve: Curves.easeInQuart,
+                              height: itemSize,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(itemSize / 2), // ovale verticale
                                 color: highlighted
                                     ? (a.color ?? theme.colorScheme.primary).withOpacity(0.12)
                                     : Colors.transparent,
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                      a.icon,
-                                      size: highlighted ? 28 : 24,
-                                      color: a.color ?? theme.iconTheme.color
+                                    a.icon,
+                                    size: highlighted ? 30 : 24,
+                                    color: a.color ?? theme.iconTheme.color,
                                   ),
                                   const SizedBox(height: 4),
-                                  Flexible(
-                                    child: Text(
-                                      a.label,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        fontSize: 10,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  Text(
+                                    a.label,
+                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
@@ -217,13 +216,9 @@ Future<int?> showDragContextMenu(
 
   overlay.insert(entry);
 
-  // Safety timeout to ensure menu closes
-  Future.delayed(const Duration(seconds: 5), () {
-    if (!completer.isCompleted) {
-      _safeRemove();
-      completer.complete(null);
-    }
-  });
+  // Future.delayed(const Duration(seconds: 6), () {
+  //   if (!resultCompleter.isCompleted) _safeRemove();
+  // });// senon vuoi far tenere aperta la finestra per 6 secondi
 
-  return completer.future;
+  return resultCompleter.future;
 }
