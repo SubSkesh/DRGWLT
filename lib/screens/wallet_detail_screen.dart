@@ -161,7 +161,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                                 case 1:
                                   print('Clone deal: ${deal.id}');
                                   await
-                                  _dealService.createDeal(deal.copyWith(date: DateTime.now()x,id: DateTime.now().millisecondsSinceEpoch.toString()));
+                                  _dealService.createDeal(deal.copyWith(date: DateTime.now(),id: DateTime.now().millisecondsSinceEpoch.toString()));
                                 case 2:
                                   final updateDeal =
                                   deal.copyWith(isPending: !deal.isPending);

@@ -52,7 +52,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('Utente non autenticato');
+      if (user == null) throw Exception('User not authenticated');
 
       await _personService.createPerson(
         name: _nameController.text.trim(),
@@ -63,7 +63,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_getTypeLabel(_selectedType)} creato con successo!'),
+            content: Text('${_getTypeLabel(_selectedType)} Agent created'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -95,22 +95,23 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
   String _getTypeLabel(PersonType type) {
     switch (type) {
       case PersonType.supplier:
-        return 'Fornitore';
+        return 'Supplier';
       case PersonType.buyer:
-        return 'Acquirente';
+        return 'Buyer';
       case PersonType.anon:
-        return 'Agente anonimo';
+        return 'Anon';
     }
   }
 
   String _getTypeDescription(PersonType type) {
     switch (type) {
       case PersonType.supplier:
-        return 'Persona o azienda da cui acquisti merci o servizi';
+        return 'Person or company from whom you purchase goods or services';
       case PersonType.buyer:
-        return 'Persona o azienda a cui vendi merci o servizi';
+        return 'Person or company to whom you sell goods or services';
       case PersonType.anon:
-        return 'Contatto generico senza specifica di ruolo';
+        return 'Generic contact without a specific role';
+
     }
   }
 
@@ -142,7 +143,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nuovo Agente'),
+        title:  Text('New Agent',style: theme.textTheme.titleLarge,),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _isLoading ? null : () => context.router.pop(),
@@ -174,16 +175,17 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Aggiungi un nuovo agente',
+                            'Add new agent',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
+                              fontFamily: 'Akira'
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Gli agenti ti aiutano a organizzare fornitori e clienti',
+                        'Agents help you to organize suppliers and buyers',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
@@ -198,8 +200,9 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Nome agente',
-                  hintText: 'Inserisci il nome completo o ragione sociale',
+                  labelText: 'Agent name',
+                  hintText: 'Insert full name or company name',
+                  hintStyle: theme.textTheme.bodyMedium,
                   prefixIcon: const Icon(Icons.badge),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -210,10 +213,10 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                 style: TextStyle(color: theme.colorScheme.onSurface),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Il nome è obbligatorio';
+                    return ' Name is required';
                   }
                   if (value.trim().length < 2) {
-                    return 'Il nome deve avere almeno 2 caratteri';
+                    return 'Name must be at least 2 characters long';
                   }
                   return null;
                 },
@@ -223,14 +226,14 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
 
               // Selezione tipo con card interattive
               Text(
-                'Tipo di agente',
+                'Agent type',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Akira',
                 ),
               ),
-              const SizedBox(height: 12),
               Text(
-                'Scegli il ruolo principale di questo agente',
+                'Choose the type of agent you want to create',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.6),
                 ),
@@ -243,14 +246,16 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                   final isSelected = _selectedType == type;
                   return Card(
                     elevation: isSelected ? 4 : 1,
-                    color: isSelected
-                        ? _getTypeColor(type, theme).withOpacity(0.1)
-                        : theme.cardTheme.color,
+                    color:
+                    // isSelected
+                    //     ? _getTypeColor(type, theme).withOpacity(0.1)
+                    //     :
+                    theme.colorScheme.surface,//cardTheme.color,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
                         color: isSelected
-                            ? _getTypeColor(type, theme)
+                            ? theme.colorScheme.primary
                             : Colors.transparent,
                         width: isSelected ? 2 : 1,
                       ),
@@ -258,14 +263,14 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                     child: ListTile(
                       leading: Icon(
                         _getTypeIcon(type),
-                        color: _getTypeColor(type, theme),
+                        color:isSelected ? theme.colorScheme.primary : Colors.grey,
                         size: 28,
                       ),
                       title: Text(
                         _getTypeLabel(type),
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: _getTypeColor(type, theme),
+                          color: isSelected ? theme.colorScheme.primary : Colors.grey,
                         ),
                       ),
                       subtitle: Text(
@@ -275,7 +280,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                       trailing: isSelected
                           ? Icon(
                         Icons.check_circle,
-                        color: _getTypeColor(type, theme),
+                        color: theme.colorScheme.primary,
                       )
                           : null,
                       onTap: () {
@@ -295,15 +300,16 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
               // Pulsante di creazione
               ElevatedButton(
                 onPressed: _isLoading ? null : _createAgent,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 2,
-                ),
+                // style: ElevatedButton.styleFrom(
+                //   backgroundColor: theme.colorScheme.primary,
+                //   foregroundColor: theme.colorScheme.onPrimary,
+                //   padding: const EdgeInsets.symmetric(vertical: 16),
+                //   shape: RoundedRectangleBorder(
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   elevation: 2,
+                // ),
+                style: theme.elevatedButtonTheme.style,
                 child: _isLoading
                     ? const SizedBox(
                   height: 20,
@@ -319,9 +325,10 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                     const Icon(Icons.person_add, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'CREA AGENTE',
+                      'CREATE AGENT',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onPrimary,
                       ),
                     ),
                   ],
