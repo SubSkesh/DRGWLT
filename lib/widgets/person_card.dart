@@ -41,12 +41,14 @@ class personCard extends StatelessWidget {
               ? theme.colorScheme.primary.withOpacity(0.2)
               : theme.colorScheme.secondary.withOpacity(0.2),
           child: Icon(
+            //if (person.photoUrl != null)
+
             person.personType == PersonType.supplier
                 ? Icons.inventory
                 : Icons.shopping_cart,
             color: person.personType == PersonType.supplier
                 ? theme.colorScheme.primary
-                : theme.colorScheme.secondary,
+                : theme.colorScheme.primary,
           ),
         ),
         title: Text(person.name),

@@ -21,7 +21,7 @@ class AppTheme {
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF1F1F1F),
-        foregroundColor: Colors.white,
+        foregroundColor: Color(0xFFE3B873),
         elevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
