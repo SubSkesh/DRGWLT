@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
       routerConfig: _appRouter.config(),// reevaluateListenable: _authNotifier,),
       title: 'DrgWallet',
       theme: AppTheme.darkTheme,
+
       // home: FutureBuilder<void>(
       //   future: _initFuture,
       //   builder: (context, snapshot) {//Snapshot è un contenitore con:connectionState(stato del future waiting,active,done),data(il dato),error) ognivolta che connectionstate cambia flutter chiama builder per aggiornare UI          // Finché non è `done` mostro la Splash

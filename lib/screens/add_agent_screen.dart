@@ -1,4 +1,7 @@
 // screens/add_agent_screen.dart
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:drgwallet/router.dart';
@@ -8,6 +11,8 @@ import 'package:drgwallet/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/services/person_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 @RoutePage()
 class AddAgentScreen extends ConsumerStatefulWidget {
@@ -23,6 +28,8 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _personService = PersonService();
+  File? _image;
+  final _picker = ImagePicker();
 
   PersonType _selectedType = PersonType.supplier;
   bool _isLoading = false;
@@ -30,11 +37,9 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
-    // Imposta il tipo iniziale se fornito
     if (widget.initialType != null) {
       _selectedType = widget.initialType!;
-    }
-    else {
+    } else {
       _selectedType = PersonType.anon;
     }
   }
@@ -69,10 +74,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
           ),
         );
 
-        // Torna indietro dopo il successo
         context.router.pop();
-
-        // Refresh della lista agenti
         ref.invalidate(personsProvider);
       }
     } catch (e) {
@@ -111,7 +113,6 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
         return 'Person or company to whom you sell goods or services';
       case PersonType.anon:
         return 'Generic contact without a specific role';
-
     }
   }
 
@@ -137,13 +138,63 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
     }
   }
 
+  Future<void> _pickAndCropImage() async {
+    try {
+      // Prima seleziona l'immagine
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        // Poi ritaglia l'immagine
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Ritaglia immagine',
+              toolbarColor: Theme.of(context).colorScheme.primary,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: true,
+            ),
+            IOSUiSettings(
+              title: 'Ritaglia immagine',
+              aspectRatioLockEnabled: true,
+              aspectRatioPickerButtonHidden: true,
+            ),
+          ],
+        );
+
+        if (croppedFile != null) {
+          setState(() {
+            _image = File(croppedFile.path);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore durante la selezione dell\'immagine: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title:  Text('New Agent',style: theme.textTheme.titleLarge,),
+        title: Text(
+          'New Agent',
+          style: theme.textTheme.titleLarge,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _isLoading ? null : () => context.router.pop(),
@@ -158,6 +209,46 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Sezione immagine con cropping
+              Center(
+                child: Column(
+                  children: [
+                    _image != null
+                        ? CircleAvatar(
+                      radius: 50,
+                      backgroundImage: FileImage(_image!),
+                    )
+                        : Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.surface,
+                        border: Border.all(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        size: 40,
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _pickAndCropImage,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Pick and Crop Image'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Card di benvenuto
               Card(
                 elevation: 2,
@@ -178,7 +269,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                             'Add new agent',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Akira'
+                              fontFamily: 'Akira',
                             ),
                           ),
                         ],
@@ -194,7 +285,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
 
               // Campo nome
               TextFormField(
@@ -224,7 +315,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Selezione tipo con card interattive
+              // Titolo sezione tipo agente
               Text(
                 'Agent type',
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -240,75 +331,70 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Card selezione tipo
-              Column(
-                children: PersonType.values.map((type) {
-                  final isSelected = _selectedType == type;
-                  return Card(
-                    elevation: isSelected ? 4 : 1,
-                    color:
-                    // isSelected
-                    //     ? _getTypeColor(type, theme).withOpacity(0.1)
-                    //     :
-                    theme.colorScheme.surface,//cardTheme.color,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : Colors.transparent,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: ListTile(
-                      leading: Icon(
-                        _getTypeIcon(type),
-                        color:isSelected ? theme.colorScheme.primary : Colors.grey,
-                        size: 28,
-                      ),
-                      title: Text(
-                        _getTypeLabel(type),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? theme.colorScheme.primary : Colors.grey,
+              // SEZIONE SCROLLABILE
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: PersonType.values.map((type) {
+                      final isSelected = _selectedType == type;
+                      return Card(
+                        elevation: isSelected ? 4 : 1,
+                        color: theme.colorScheme.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : Colors.transparent,
+                            width: isSelected ? 2 : 1,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        _getTypeDescription(type),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      trailing: isSelected
-                          ? Icon(
-                        Icons.check_circle,
-                        color: theme.colorScheme.primary,
-                      )
-                          : null,
-                      onTap: () {
-                        setState(() => _selectedType = type);
-                      },
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                        child: ListTile(
+                          leading: Icon(
+                            _getTypeIcon(type),
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                            size: 28,
+                          ),
+                          title: Text(
+                            _getTypeLabel(type),
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : Colors.grey,
+                            ),
+                          ),
+                          subtitle: Text(
+                            _getTypeDescription(type),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          trailing: isSelected
+                              ? Icon(
+                            Icons.check_circle,
+                            color: theme.colorScheme.primary,
+                          )
+                              : null,
+                          onTap: () {
+                            setState(() => _selectedType = type);
+                          },
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 16),
 
               // Pulsante di creazione
               ElevatedButton(
                 onPressed: _isLoading ? null : _createAgent,
-                // style: ElevatedButton.styleFrom(
-                //   backgroundColor: theme.colorScheme.primary,
-                //   foregroundColor: theme.colorScheme.onPrimary,
-                //   padding: const EdgeInsets.symmetric(vertical: 16),
-                //   shape: RoundedRectangleBorder(
-                //     borderRadius: BorderRadius.circular(12),
-                //   ),
-                //   elevation: 2,
-                // ),
                 style: theme.elevatedButtonTheme.style,
                 child: _isLoading
                     ? const SizedBox(

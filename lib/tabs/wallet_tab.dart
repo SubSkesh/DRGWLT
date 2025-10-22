@@ -168,7 +168,7 @@ class _WalletsTabState extends ConsumerState<WalletsTab> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'DRG Wallets',
+          'Wallets',
           style: theme.textTheme.headlineLarge?.copyWith(
             color: theme.colorScheme.primary,
           ),
