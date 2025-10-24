@@ -1,6 +1,5 @@
 // screens/add_agent_screen.dart
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
@@ -12,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/services/person_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
+import 'package:drgwallet/services/permission_service.dart';
 
 @RoutePage()
 class AddAgentScreen extends ConsumerStatefulWidget {
@@ -62,6 +61,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
       await _personService.createPerson(
         name: _nameController.text.trim(),
         personType: _selectedType,
+        imageFile: _image,
         ownerId: user.uid,
       );
 
@@ -127,62 +127,129 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
     }
   }
 
-  Color _getTypeColor(PersonType type, ThemeData theme) {
-    switch (type) {
-      case PersonType.supplier:
-        return theme.colorScheme.primary;
-      case PersonType.buyer:
-        return theme.colorScheme.secondary;
-      case PersonType.anon:
-        return Colors.grey;
-    }
-  }
-
-  Future<void> _pickAndCropImage() async {
+  // 📸 METODO PER SCATTARE FOTO
+  Future<void> _takePhoto() async {
     try {
-      // Prima seleziona l'immagine
+      final hasPermission = await PermissionService.requestCameraPermission();
+
+      if (!hasPermission) {
+        await _showPermissionDeniedDialog();
+        return;
+      }
+
       final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: ImageSource.camera,
         imageQuality: 85,
+        maxWidth: 500,
+        maxHeight: 500,
       );
 
       if (pickedFile != null) {
-        // Poi ritaglia l'immagine
-        final CroppedFile? croppedFile = await ImageCropper().cropImage(
-          sourcePath: pickedFile.path,
-          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: 'Ritaglia immagine',
-              toolbarColor: Theme.of(context).colorScheme.primary,
-              toolbarWidgetColor: Colors.white,
-              initAspectRatio: CropAspectRatioPreset.square,
-              lockAspectRatio: true,
-            ),
-            IOSUiSettings(
-              title: 'Ritaglia immagine',
-              aspectRatioLockEnabled: true,
-              aspectRatioPickerButtonHidden: true,
-            ),
-          ],
-        );
-
-        if (croppedFile != null) {
-          setState(() {
-            _image = File(croppedFile.path);
-          });
-        }
+        setState(() {
+          _image = File(pickedFile.path);
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore durante la selezione dell\'immagine: $e'),
+            content: Text('Errore scatto foto: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  // 🖼️ METODO PER GALLERIA
+  Future<void> _pickFromGallery() async {
+    try {
+      final hasPermission = await PermissionService.requestGalleryPermission();
+
+      if (!hasPermission) {
+        await _showPermissionDeniedDialog();
+        return;
+      }
+
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 500,
+        maxHeight: 500,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _image = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore selezione galleria: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showPermissionDeniedDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permesso negato'),
+        content: const Text(
+          'Per utilizzare questa funzionalità, devi concedere i permessi necessari. Vuoi aprire le impostazioni?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              PermissionService.openAppSettings();
+            },
+            child: const Text('Impostazioni'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // WIDGET PER ICON BUTTON
+  Widget _buildIconButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required ThemeData theme,
+  }) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            icon: Icon(icon, size: 24),
+            color: theme.colorScheme.onPrimary,
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -193,7 +260,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
       appBar: AppBar(
         title: Text(
           'New Agent',
-          style: theme.textTheme.titleLarge,
+          style: theme.textTheme.headlineLarge!.copyWith(color: theme.colorScheme.primary, ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -209,7 +276,7 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Sezione immagine con cropping
+              // Sezione immagine
               Center(
                 child: Column(
                   children: [
@@ -235,57 +302,32 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _pickAndCropImage,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Pick and Crop Image'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                      ),
+
+                    // DUE ICON BUTTON
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // IconButton per scattare foto
+                        _buildIconButton(
+                          icon: Icons.camera_alt,
+                          label: 'Take Photo',
+                          onPressed: _takePhoto,
+                          theme: theme,
+                        ),
+                        const SizedBox(width: 20),
+                        // IconButton per galleria
+                        _buildIconButton(
+                          icon: Icons.photo_library,
+                          label: 'Gallery',
+                          onPressed: _pickFromGallery,
+                          theme: theme,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Card di benvenuto
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_add,
-                            color: theme.colorScheme.primary,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Add new agent',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Akira',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Agents help you to organize suppliers and buyers',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
 
               // Campo nome
               TextFormField(

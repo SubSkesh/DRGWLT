@@ -43,7 +43,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: AddWalletRoute.page),
     //da eliminare
     AutoRoute(page: ToDeleteRoute.page),
-    AutoRoute(page: AgentsRoute.page),
+    // AutoRoute(page: AgentsRoute.page),
     AutoRoute(page: AddAgentRoute.page),
   ];
 }

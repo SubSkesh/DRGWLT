@@ -7,9 +7,9 @@ import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:drgwallet/services/person_service.dart';
 import 'package:drgwallet/theme/app_theme.dart';
-import 'package:drgwallet/widgets/person_card.dart';
 import 'package:drgwallet/widgets/add_fab_agents.dart';
 import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
+import 'package:drgwallet/widgets/person_card.dart';
 
 class AgentsTab extends ConsumerStatefulWidget {
   const AgentsTab({super.key});
@@ -52,7 +52,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       context,
       position,
       actions,
-      'person_${person.id}',
+      'person_${person.id}',//parametro inutile
       mode: drag_context_menu.MenuOpenMode.dragToSelect,
     );
 
@@ -70,25 +70,49 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
 
   void _editPerson(BuildContext context, Person person) {
     // Implementa la modifica della persona
-    // context.router.push(EditPersonRoute(person: person));
     print('Modifica persona: ${person.name}');
   }
 
   void _deletePerson(BuildContext context, Person person) {
+    final theme = Theme.of(context);
+    final destructiveButtonStyle = ElevatedButton.styleFrom(
+      backgroundColor: theme.colorScheme.error,
+      foregroundColor: theme.colorScheme.onError,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text(
-          'Are you sure you want to delete "${person.name}"? '
-              'This action cannot be undone.',
+        title:  Row(
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error, size: 28),
+            Text('Confirm Delete'),
+          ],
         ),
+
+        content:         RichText(
+      text: TextSpan(
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+    ),
+    children: [
+    const TextSpan(text: "Are you sure you want to delete  \""),
+    TextSpan(
+    text: person.name,
+    style: const TextStyle(fontWeight: FontWeight.bold),
+    ),
+    const TextSpan(text: "\"?\nThis action cannot be undone."), // Aggiunto un avviso
+    ],
+    ),
+    ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Undo'),
           ),
-          TextButton(style: Theme.of(context).textButtonTheme.style ,
+          TextButton(
+            style:destructiveButtonStyle,
             onPressed: () async {
               Navigator.pop(context);
               try {
@@ -115,7 +139,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             },
             child: const Text(
               'Elimina',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -129,7 +153,11 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+          Icon(
+            Icons.people_outline,
+            size: 64,
+            color: theme.colorScheme.onSurface.withOpacity(0.3),
+          ),
           const SizedBox(height: 16),
           Text(
             _filterType == PersonType.anon
@@ -137,7 +165,9 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
                 : _filterType == PersonType.supplier
                 ? 'No supplier agents found'
                 : 'No customer agents found',
-            style: theme.textTheme.bodyLarge,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
           const SizedBox(height: 32),
           ElevatedButton(
@@ -158,16 +188,22 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
   }
 
   Widget _buildAgentsList(List<Person> filteredPersons) {
-    return ListView.builder(
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.8,
+      ),
       itemCount: filteredPersons.length,
       itemBuilder: (context, index) {
         final person = filteredPersons[index];
-        return GestureDetector(
-          onLongPressStart: (details) {
+        return PersonGridCard(
+          person: person,
+          onLongPress: (details) {
             _showPersonContextMenu(context, details.globalPosition, person);
           },
-          child: personCard(person: person),
         );
       },
     );
@@ -178,7 +214,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
 
     return personsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Errore: $error')),
+      error: (error, stack) => Center(child: Text('Error: $error')),
       data: (persons) {
         final filteredPersons = _filterType == PersonType.anon
             ? persons
@@ -199,9 +235,12 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title:  Text('Agents', style: theme.textTheme.headlineLarge?.copyWith(
-          color: theme.colorScheme.primary),),
-
+        title: Text(
+          'Agents',
+          style: theme.textTheme.headlineLarge?.copyWith(
+            color: theme.colorScheme.primary,
+          ),
+        ),
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 0,

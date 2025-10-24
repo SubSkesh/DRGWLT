@@ -42,7 +42,9 @@ dependencies:
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
   image_picker: ^1.2.0
-  image_cropper: ^5.0.1
+#  image_cropper: ^4.0.0 da problemi
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

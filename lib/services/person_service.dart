@@ -5,45 +5,52 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/models/person.dart';
-
+import 'package:path_provider/path_provider.dart';
+import 'dart:io'; // <- Aggiungi questo per File
+import 'package:drgwallet/services/local_image_service.dart'; // <- Crea questo file
 
 class PersonService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Crea una nuova persona
   Future<Person> createPerson({
     required String name,
-
     required String ownerId,
     required PersonType personType,
-
+    File? imageFile, // <- Solo salvataggio locale della foto
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Utente non autenticato');
 
     final personRef = _firestore.collection('persons').doc();
+    final agentId = personRef.id;
     final now = DateTime.now();
 
+    String? localImagePath;
+
+    // Salva immagine SOLO localmente
+    if (imageFile != null) {
+      localImagePath = await LocalImageService.saveAgentImage(
+          imageFile,
+          agentId
+      );
+    }
+
     final person = Person(
-      id: personRef.id,
+      id: agentId,
       name: name,
       personType: personType,
-
       ownerId: user.uid,
-
+      localImagePath: localImagePath, // <- Path locale salvato nel model
       createdAt: now,
       lastUpdated: now,
     );
 
-    await personRef.set({
-      ...person.toMap(),
-
-    });
+    // Salva su Firestore SOLO i dati, senza upload immagini
+    await personRef.set(person.toMap());
 
     return person;
   }
-
   /// Ottiene tutte le persone di un utente
   Stream<List<Person>> getUserPersons({bool? isSupplier}) {
     final user = _auth.currentUser;
@@ -89,34 +96,46 @@ class PersonService {
   }
 
   /// Aggiorna una persona esistente
-  Future<void> updatePerson(Person person) async {
+  Future<void> updatePerson({
+    required Person person,
+    File? newImageFile, // <- Solo salvataggio locale
+  }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Utente non autenticato');
 
     final personRef = _firestore.collection('persons').doc(person.id);
     final personDoc = await personRef.get();
 
-    if (!personDoc.exists) {
-      throw Exception('Persona non trovata');
-    }
+    if (!personDoc.exists) throw Exception('Persona non trovata');
 
     final data = personDoc.data();
     if (data != null && data is Map<String, dynamic>) {
-      if (data['ownerId'] != user.uid) {
-        throw Exception('Non autorizzato');
+      if (data['ownerId'] != user.uid) throw Exception('Non autorizzato');
+
+      String? updatedImagePath = person.localImagePath;
+
+      // Gestione immagine SOLO locale
+      if (newImageFile != null) {
+        // Cancella vecchia immagine locale
+        if (person.localImagePath != null) {
+          await LocalImageService.deleteAgentImage(person.localImagePath!);
+        }
+
+        // Salva nuova immagine locale
+        updatedImagePath = await LocalImageService.saveAgentImage(
+            newImageFile,
+            person.id
+        );
       }
 
+      // Aggiorna Firestore SOLO con il path locale
       await personRef.update({
         'name': person.name,
-        'isSupplier': person.personType,
+        'personType': person.personType.index,
         'dealIds': person.dealIds,
         'lastUpdated': FieldValue.serverTimestamp(),
-        'photoUrl': person.photoUrl,
-        'personType': person.personType,
-
+        'localImagePath': updatedImagePath, // <- Solo il path, non l'immagine
       });
-    } else {
-      throw Exception('Dati della persona nulli o tipo non valido');
     }
   }
 

@@ -9,7 +9,7 @@
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Pick an image from gallery</string>
+		<string>Pick an image from gallery </string>
 		<key>NSCameraUsageDescription</key>
 		<string>Pick an image from camera</string>
 		<key>NSMicrophoneUsageDescription</key>

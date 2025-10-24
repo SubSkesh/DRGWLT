@@ -11,6 +11,7 @@ class Person {
   final DateTime createdAt;
   final DateTime? lastUpdated;
   final PersonType personType;
+  final String? localImagePath; // <- AGGIUNGI QUESTO CAMPO
   final String? photoUrl;
 
   const Person({
@@ -21,6 +22,7 @@ class Person {
     required this.createdAt,
     this.lastUpdated,
     required this.personType,
+    this.localImagePath, // <- AGGIUNGI QUESTO CAMPO
     this.photoUrl,
   });
 
@@ -51,6 +53,7 @@ class Person {
               createdAt == other.createdAt &&
               lastUpdated == other.lastUpdated &&
               personType == other.personType &&
+              localImagePath == other.localImagePath &&
               photoUrl == other.photoUrl);
 
   @override
@@ -62,6 +65,7 @@ class Person {
       createdAt.hashCode ^
       lastUpdated.hashCode ^
       personType.hashCode ^
+      localImagePath.hashCode ^
       photoUrl.hashCode;
 
   @override
@@ -74,6 +78,7 @@ class Person {
         ' createdAt: $createdAt,' +
         ' lastUpdated: $lastUpdated,' +
         ' personType: $personType,' +
+        ' localImagePath: $localImagePath,' +
         ' photoUrl: $photoUrl,' +
         '}';
   }
@@ -86,6 +91,7 @@ class Person {
     DateTime? createdAt,
     DateTime? lastUpdated,
     PersonType? personType,
+    String? localImagePath,
     String? photoUrl,
   }) {
     return Person(
@@ -96,6 +102,7 @@ class Person {
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       personType: personType ?? this.personType,
+      localImagePath: localImagePath ?? this.localImagePath,
       photoUrl: photoUrl ?? this.photoUrl,
     );
   }
@@ -109,6 +116,7 @@ class Person {
       'createdAt': Timestamp.fromDate(createdAt),
       'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
       'personType': personType.toString().split('.').last,
+      'localImagePath': localImagePath,
       'photoUrl': photoUrl,
     };
   }
@@ -125,6 +133,7 @@ class Person {
           ? (map['lastUpdated'] as Timestamp).toDate()
           : null,
       personType: _stringToPersonType(map['personType'] as String),
+      localImagePath: map['localImagePath'] as String?,
       photoUrl: map['photoUrl'] as String?,
     );
   }

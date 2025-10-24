@@ -1,81 +1,121 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:auto_route/auto_route.dart';
-import 'package:drgwallet/router.dart';
-import 'package:drgwallet/models/deal.dart';
-import 'package:drgwallet/models/enum.dart';
-import 'package:drgwallet/models/wallet.dart';import 'package:drgwallet/models/person.dart';
-import 'package:drgwallet/widgets/custom_bottom_nav.dart';
-import 'package:drgwallet/widgets/deal_list_item.dart';
-import 'package:drgwallet/widgets/wallet_card.dart';
-import 'package:drgwallet/widgets/add_fab.dart';
-import 'package:drgwallet/theme/app_theme.dart';
-import 'package:drgwallet/providers/providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drgwallet/services/wallet_service.dart';
-import 'package:drgwallet/services/person_service.dart';
-import 'package:drgwallet/widgets/radial_action.dart';
-import 'package:drgwallet/widgets/radial_context_menu.dart';
-import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
-import 'dart:math';
-import 'dart:async';
-import 'package:flutter/services.dart';
-import 'package:drgwallet/widgets/alarm_delete_wallet.dart';
-class personCard extends StatelessWidget {
-  final Person person;
+import 'package:drgwallet/models/person.dart';
+import 'package:drgwallet/services/local_image_service.dart';
 
-  const personCard({
+class PersonGridCard extends StatefulWidget {
+  final Person person;
+  final Function(LongPressStartDetails details)? onLongPress;
+
+  const PersonGridCard({
     super.key,
     required this.person,
-
+    this.onLongPress,
   });
+
+  @override
+  State<PersonGridCard> createState() => _PersonGridCardState();
+}
+
+class _PersonGridCardState extends State<PersonGridCard> {
+  File? _agentImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAgentImage();
+  }
+
+  Future<void> _loadAgentImage() async {
+    if (widget.person.localImagePath != null) {
+      final image = await LocalImageService.getAgentImage(widget.person.localImagePath);
+      if (mounted) {
+        setState(() {
+          _agentImage = image;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: person.personType == PersonType.supplier
-              ? theme.colorScheme.primary.withOpacity(0.2)
-              : theme.colorScheme.secondary.withOpacity(0.2),
-          child: Icon(
-            //if (person.photoUrl != null)
 
-            person.personType == PersonType.supplier
-                ? Icons.inventory
-                : Icons.shopping_cart,
-            color: person.personType == PersonType.supplier
-                ? theme.colorScheme.primary
-                : theme.colorScheme.primary,
-          ),
-        ),
-        title: Text(person.name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onLongPressStart: widget.onLongPress,
+      child: Container(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              person.type,
-              style: theme.textTheme.bodySmall,
-            ),
-            Text(
-              'Deals: ${person.dealIds.length}',
-              style: theme.textTheme.bodySmall,
+            _buildAgentAvatar(theme),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                widget.person.name,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
-        trailing: Text(
-          'prova', //_formatDate(person.createdAt),
-          style: theme.textTheme.bodySmall,
-        ),
-        // onTap: () => _showPersonDetails(context, person),
-        // onLongPressStart: (details) => _showPersonContextMenu(
-        //   context,
-        //   details.globalPosition,
-        //   person,
-        // ),
       ),
     );
+  }
+
+  Widget _buildAgentAvatar(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: _agentImage != null
+          ? CircleAvatar(
+        radius: 40,
+        backgroundImage: FileImage(_agentImage!),
+      )
+          : CircleAvatar(
+        radius: 40,
+        backgroundColor: _getTypeColor(widget.person.personType, theme).withOpacity(0.2),
+        child: Icon(
+          _getTypeIcon(widget.person.personType),
+          size: 32,
+          color: _getTypeColor(widget.person.personType, theme),
+        ),
+      ),
+    );
+  }
+
+  Color _getTypeColor(PersonType type, ThemeData theme) {
+    switch (type) {
+      case PersonType.supplier:
+        return theme.colorScheme.primary;
+      case PersonType.buyer:
+        return theme.colorScheme.secondary;
+      case PersonType.anon:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getTypeIcon(PersonType type) {
+    switch (type) {
+      case PersonType.supplier:
+        return Icons.inventory;
+      case PersonType.buyer:
+        return Icons.shopping_cart;
+      case PersonType.anon:
+        return Icons.person_outline;
+    }
   }
 }

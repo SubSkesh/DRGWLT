@@ -57,7 +57,7 @@ class _WalletsTabState extends ConsumerState<WalletsTab> {
 
     final selectedIndex = await drag_context_menu.showDragContextMenu(
       context,
-      details.globalPosition,
+      details.globalPosition,//rapresenta la posizione globale della finestra in cui viene mostrato il menu
       actions,
       'homescreen',
       mode: drag_context_menu.MenuOpenMode.dragToSelect,
@@ -72,30 +72,54 @@ class _WalletsTabState extends ConsumerState<WalletsTab> {
           print('Duplica wallet');
           break;
         case 2:
-          _showDeleteWalletDialog(wallet);
+          _showDeleteDialog(context,wallet);
           break;
       }
     }
   }
 
-  void _showDeleteWalletDialog(Wallet wallet) {
-    showDialog(
-      context: context,
-      builder: (ctx) => WalletAlarmDelete(
-        walletName: wallet.name,
-        onConfirm: () async {
-          final walletService = ref.read(walletServiceProvider);
-          await walletService.deleteWallet(wallet.id);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Wallet eliminato con successo")),
-            );
-          }
-        },
-      ),
-    );
-  }
+  void _showDeleteDialog(BuildContext pageContext, Wallet walletToDelete) async {
+    // Istanzia il tuo service qui o recuperalo da un provider
+    final walletService = WalletService();
 
+    // Usa il context della PAGINA, non del dialog
+    final bool? shouldDelete = await showDialog<bool>(
+      context: pageContext,
+      builder: (dialogContext) => WalletAlarmDelete(wallet: walletToDelete),
+    );
+
+    // Controlla se il widget è ancora "montato" prima di usare il context.
+    // È una buona pratica dopo operazioni asincrone.
+    if (!pageContext.mounted) return;
+
+    // Esegui l'eliminazione solo se l'utente ha premuto "Delete" (restituisce true)
+    if (shouldDelete == true) {
+      try {
+        // 1. Esegui la logica di eliminazione
+        await walletService.deleteWallet(walletToDelete.id);
+
+        // 2. Mostra un messaggio di successo usando il context della pagina
+        ScaffoldMessenger.of(pageContext).showSnackBar(
+          SnackBar(
+            content: Text('"${walletToDelete.name}" successfully deleted.'),
+            backgroundColor: Colors.green,
+            duration: Duration(milliseconds: 1400),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      } catch (e) {
+        // 3. In caso di errore, mostra un messaggio di errore
+        ScaffoldMessenger.of(pageContext).showSnackBar(
+          SnackBar(
+            content: Text('Error during deletion: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
   Widget _buildEmptyWalletsState() {
     final theme = Theme.of(context);
     return Center(

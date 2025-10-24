@@ -151,22 +151,6 @@ class AddWalletRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [AgentsScreen]
-class AgentsRoute extends PageRouteInfo<void> {
-  const AgentsRoute({List<PageRouteInfo>? children})
-    : super(AgentsRoute.name, initialChildren: children);
-
-  static const String name = 'AgentsRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const AgentsScreen();
-    },
-  );
-}
-
-/// generated route for
 /// [AuthGate]
 class AuthGateRoute extends PageRouteInfo<void> {
   const AuthGateRoute({List<PageRouteInfo>? children})
