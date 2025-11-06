@@ -1,4 +1,3 @@
-// screens/add_agent_screen.dart
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/services/person_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:drgwallet/services/permission_service.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 @RoutePage()
 class AddAgentScreen extends ConsumerStatefulWidget {
@@ -127,16 +126,50 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
     }
   }
 
-  // 📸 METODO PER SCATTARE FOTO
+  // 🎯 METODO PER RITAGLIARE L'IMMAGINE (SEMPLIFICATO)
+  Future<void> _cropImage(File imageFile) async {
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imageFile.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1), // Quadrato
+        compressQuality: 85,
+        maxWidth: 500,
+        maxHeight: 500,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop image',
+            toolbarColor: Theme.of(context).colorScheme.primary,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Image',
+            aspectRatioLockEnabled: true,
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        setState(() {
+          _image = File(croppedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error into cropping: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // 📸 METODO SEMPLIFICATO PER SCATTARE FOTO
   Future<void> _takePhoto() async {
     try {
-      final hasPermission = await PermissionService.requestCameraPermission();
-
-      if (!hasPermission) {
-        await _showPermissionDeniedDialog();
-        return;
-      }
-
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
@@ -145,9 +178,8 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
       );
 
       if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-        });
+        final file = File(pickedFile.path);
+        await _cropImage(file); // ← RITAGLIO AUTOMATICO
       }
     } catch (e) {
       if (mounted) {
@@ -161,16 +193,9 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
     }
   }
 
-  // 🖼️ METODO PER GALLERIA
+  // 🖼️ METODO SEMPLIFICATO PER GALLERIA
   Future<void> _pickFromGallery() async {
     try {
-      final hasPermission = await PermissionService.requestGalleryPermission();
-
-      if (!hasPermission) {
-        await _showPermissionDeniedDialog();
-        return;
-      }
-
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -179,9 +204,8 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
       );
 
       if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-        });
+        final file = File(pickedFile.path);
+        await _cropImage(file); // ← RITAGLIO AUTOMATICO
       }
     } catch (e) {
       if (mounted) {
@@ -193,31 +217,6 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
         );
       }
     }
-  }
-
-  Future<void> _showPermissionDeniedDialog() async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permesso negato'),
-        content: const Text(
-          'Per utilizzare questa funzionalità, devi concedere i permessi necessari. Vuoi aprire le impostazioni?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              PermissionService.openAppSettings();
-            },
-            child: const Text('Impostazioni'),
-          ),
-        ],
-      ),
-    );
   }
 
   // WIDGET PER ICON BUTTON
@@ -307,7 +306,6 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // IconButton per scattare foto
                         _buildIconButton(
                           icon: Icons.camera_alt,
                           label: 'Take Photo',
@@ -315,7 +313,6 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
                           theme: theme,
                         ),
                         const SizedBox(width: 20),
-                        // IconButton per galleria
                         _buildIconButton(
                           icon: Icons.photo_library,
                           label: 'Gallery',

@@ -31,6 +31,11 @@ Stream<List<Deal>> userDeals( ref) {
   if (user == null) return Stream.value([]);
   return dealService.getUserDeals(user.uid);
 }
+@riverpod
+Future<Deal> deal( ref, String dealId) {
+  final dealService = ref.watch(dealServiceProvider);
+  return dealService.getDeal(dealId) ?? Future.error('Deal not found');
+}
 
 @riverpod
 Stream<List<Wallet>> userWallets( ref) {

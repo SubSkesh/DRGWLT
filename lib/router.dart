@@ -1,5 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:drgwallet/screens/modify_wallet_screen.dart';
+import 'package:drgwallet/screens/modify_deal_screen.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:drgwallet/screens/homescreen.dart';
 import 'package:drgwallet/screens/loginscreen.dart';
@@ -16,6 +18,7 @@ import 'package:drgwallet/screens/add_wallet_screen.dart';
 import 'package:drgwallet/screens/todeletescreen.dart';
 import 'package:drgwallet/screens/agents_screen.dart';
 import 'package:drgwallet/screens/add_agent_screen.dart';
+
 
 import 'models/person.dart';
 
@@ -37,6 +40,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: AddDealRoute.page),
     AutoRoute(page: WalletDetailRoute.page),
     AutoRoute(page: ModifyWalletRoute.page),
+    AutoRoute(page: ModifyDealRoute.page),
 
     AutoRoute(page: ProfileRoute.page),
     AutoRoute(page: StatsRoute.page),

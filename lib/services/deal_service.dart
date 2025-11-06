@@ -54,6 +54,18 @@ class DealService {
     })
         .toList());
   }
+  // Metodo per ottenere un singolo deal
+  Future<Deal?> getDeal(String dealId) async {
+    try {
+      final doc = await _firestore.collection('deals').doc(dealId).get();
+      if (doc.exists) {
+        return Deal.fromMap(doc.data()!, doc.id);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Errore nel caricamento del deal: $e');
+    }
+  }
 
 
   // 3. Filtra deals per periodo

@@ -18,7 +18,7 @@ class ContextAction {
 
 enum MenuOpenMode { dragToSelect, tapToSelect }
 enum MenuScreenSource {homescreen,
-walletdetailscreen,}
+walletdetailscreen,dealdetailscreen}
 
 Future<int?> showDragContextMenu(
     BuildContext context,

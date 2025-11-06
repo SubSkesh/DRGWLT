@@ -108,23 +108,7 @@ final userDealsProvider = AutoDisposeStreamProvider<List<Deal>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef UserDealsRef = AutoDisposeStreamProviderRef<List<Deal>>;
-String _$userWalletsHash() => r'e6f5e8920551daedee26d7e2f0a0aafb7d34e804';
-
-/// See also [userWallets].
-@ProviderFor(userWallets)
-final userWalletsProvider = AutoDisposeStreamProvider<List<Wallet>>.internal(
-  userWallets,
-  name: r'userWalletsProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$userWalletsHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef UserWalletsRef = AutoDisposeStreamProviderRef<List<Wallet>>;
-String _$walletDetailsHash() => r'f5f77457f6255e4fb94ff081aa307fae18b8bd52';
+String _$dealHash() => r'c065f461af91a393c9f9caa4b0c64ce01507b7f6';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -146,6 +130,135 @@ class _SystemHash {
     return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
   }
 }
+
+/// See also [deal].
+@ProviderFor(deal)
+const dealProvider = DealFamily();
+
+/// See also [deal].
+class DealFamily extends Family<AsyncValue<Deal>> {
+  /// See also [deal].
+  const DealFamily();
+
+  /// See also [deal].
+  DealProvider call(String dealId) {
+    return DealProvider(dealId);
+  }
+
+  @override
+  DealProvider getProviderOverride(covariant DealProvider provider) {
+    return call(provider.dealId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'dealProvider';
+}
+
+/// See also [deal].
+class DealProvider extends AutoDisposeFutureProvider<Deal> {
+  /// See also [deal].
+  DealProvider(String dealId)
+    : this._internal(
+        (ref) => deal(ref as DealRef, dealId),
+        from: dealProvider,
+        name: r'dealProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product') ? null : _$dealHash,
+        dependencies: DealFamily._dependencies,
+        allTransitiveDependencies: DealFamily._allTransitiveDependencies,
+        dealId: dealId,
+      );
+
+  DealProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.dealId,
+  }) : super.internal();
+
+  final String dealId;
+
+  @override
+  Override overrideWith(FutureOr<Deal> Function(DealRef provider) create) {
+    return ProviderOverride(
+      origin: this,
+      override: DealProvider._internal(
+        (ref) => create(ref as DealRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        dealId: dealId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Deal> createElement() {
+    return _DealProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DealProvider && other.dealId == dealId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, dealId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin DealRef on AutoDisposeFutureProviderRef<Deal> {
+  /// The parameter `dealId` of this provider.
+  String get dealId;
+}
+
+class _DealProviderElement extends AutoDisposeFutureProviderElement<Deal>
+    with DealRef {
+  _DealProviderElement(super.provider);
+
+  @override
+  String get dealId => (origin as DealProvider).dealId;
+}
+
+String _$userWalletsHash() => r'e6f5e8920551daedee26d7e2f0a0aafb7d34e804';
+
+/// See also [userWallets].
+@ProviderFor(userWallets)
+final userWalletsProvider = AutoDisposeStreamProvider<List<Wallet>>.internal(
+  userWallets,
+  name: r'userWalletsProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$userWalletsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef UserWalletsRef = AutoDisposeStreamProviderRef<List<Wallet>>;
+String _$walletDetailsHash() => r'f5f77457f6255e4fb94ff081aa307fae18b8bd52';
 
 /// See also [walletDetails].
 @ProviderFor(walletDetails)

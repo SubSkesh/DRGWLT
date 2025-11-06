@@ -199,6 +199,53 @@ class LoginRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [ModifyDealScreen]
+class ModifyDealRoute extends PageRouteInfo<ModifyDealRouteArgs> {
+  ModifyDealRoute({
+    Key? key,
+    required String dealId,
+    List<PageRouteInfo>? children,
+  }) : super(
+         ModifyDealRoute.name,
+         args: ModifyDealRouteArgs(key: key, dealId: dealId),
+         initialChildren: children,
+       );
+
+  static const String name = 'ModifyDealRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<ModifyDealRouteArgs>();
+      return ModifyDealScreen(key: args.key, dealId: args.dealId);
+    },
+  );
+}
+
+class ModifyDealRouteArgs {
+  const ModifyDealRouteArgs({this.key, required this.dealId});
+
+  final Key? key;
+
+  final String dealId;
+
+  @override
+  String toString() {
+    return 'ModifyDealRouteArgs{key: $key, dealId: $dealId}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ModifyDealRouteArgs) return false;
+    return key == other.key && dealId == other.dealId;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ dealId.hashCode;
+}
+
+/// generated route for
 /// [ModifyWalletScreen]
 class ModifyWalletRoute extends PageRouteInfo<ModifyWalletRouteArgs> {
   ModifyWalletRoute({

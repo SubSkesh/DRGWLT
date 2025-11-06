@@ -6,16 +6,15 @@ import 'package:drgwallet/services/wallet_service.dart';
 import 'package:drgwallet/services/deal_service.dart';
 import 'package:drgwallet/widgets/deal_list_item.dart';
 import 'package:drgwallet/utils/wallet_calculator.dart';
-import 'package:flutter/material.dart';
 import 'package:drgwallet/models/deal.dart';
 import 'package:drgwallet/utils/deal_calculator.dart';
 import 'package:drgwallet/theme/app_theme.dart';
-import'package:drgwallet/models/enum.dart';
+import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/widgets/add_fab_deal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
-
+import 'package:drgwallet/screens/modify_deal_screen.dart';
 
 @RoutePage()
 class WalletDetailScreen extends ConsumerStatefulWidget {
@@ -49,7 +48,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
     final theme = Theme.of(context);
 
     final walletAsync = ref.watch(walletDetailsWithStatsStreamProvider(widget.walletId));
-    final dealsAsync = ref.watch(walletDealsProvider(widget.walletId  ));
+    final dealsAsync = ref.watch(walletDealsProvider(widget.walletId));
 
     return Scaffold(
       appBar: AppBar(
@@ -122,20 +121,19 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                               ),
                               drag_context_menu.ContextAction(
                                 icon: Icons.copy,
-                                  label: 'Clone',
-                                  color: theme.colorScheme.primary,
-
+                                label: 'Clone',
+                                color: theme.colorScheme.primary,
                               ),
                               drag_context_menu.ContextAction(
-                                icon: deal.isPending
-                                    ? Icons.check_circle
-                                    : Icons.pending_actions,
-                                label: deal.isPending
-                                    ? 'Not Pending'
-                                    : 'Pending',
-                                color: deal.isPending
-                                    ? theme.colorScheme.primary
-                                    : Colors.orange
+                                  icon: deal.isPending
+                                      ? Icons.check_circle
+                                      : Icons.pending_actions,
+                                  label: deal.isPending
+                                      ? 'Not Pending'
+                                      : 'Pending',
+                                  color: deal.isPending
+                                      ? theme.colorScheme.primary
+                                      : Colors.orange
                               ),
                               drag_context_menu.ContextAction(
                                 icon: Icons.delete,
@@ -156,32 +154,35 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                             if (selectedIndex != null) {
                               switch (selectedIndex) {
                                 case 0:
-                                  print('Modifica deal: ${deal.id}');
+                                // Modifica deal
+                                  if (mounted) {
+                                    context.router.push(ModifyDealRoute(dealId: deal.id));
+                                  }
                                   break;
                                 case 1:
+                                // Clone deal
                                   print('Clone deal: ${deal.id}');
-                                  await
-                                  _dealService.createDeal(deal.copyWith(date: DateTime.now(),id: DateTime.now().millisecondsSinceEpoch.toString()));
+                                  await _dealService.createDeal(deal.copyWith(
+                                      date: DateTime.now(),
+                                      id: DateTime.now().millisecondsSinceEpoch.toString()
+                                  ));
+                                  break;
                                 case 2:
-                                  final updateDeal =
-                                  deal.copyWith(isPending: !deal.isPending);
+                                // Toggle pending
+                                  final updateDeal = deal.copyWith(isPending: !deal.isPending);
                                   await _dealService.updateDeal(updateDeal);
                                   break;
                                 case 3:
+                                // Elimina deal
                                   print('Elimina deal: ${deal.id}');
                                   // await _dealService.deleteDeal(deal.id!);
                                   break;
                               }
                             }
                           },
-                          child: DealListItem(
-                            deal: deal,
-                          //  onTap: () {
-                              // TODO: navigazione dettaglio deal
-
-                          ),
-                        );
-                      },
+                          child: DealListItem(deal: deal),
+                        ); // ← CORREZIONE: Aggiunto il punto e virgola qui
+                      }, // ← CORREZIONE: Questa virgola chiude il itemBuilder
                     );
                   },
                 ),
