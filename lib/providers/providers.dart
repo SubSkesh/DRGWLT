@@ -32,11 +32,38 @@ Stream<List<Deal>> userDeals( ref) {
   return dealService.getUserDeals(user.uid);
 }
 @riverpod
-Future<Deal> deal( ref, String dealId) {
+Future<Deal> deal(ref, String dealId) async {
   final dealService = ref.watch(dealServiceProvider);
-  return dealService.getDeal(dealId) ?? Future.error('Deal not found');
+  final deal = await dealService.getDeal(dealId);
+  if (deal == null) {
+    throw Exception('Deal with id $dealId not found');
+  }
+  return deal;
 }
+@riverpod
+Future<Deal> enrichedDeal( ref, String dealId) async {
+  final dealService = ref.watch(dealServiceProvider);
+  final deal = await dealService.getDeal(dealId);
+  if (deal == null) {
+    throw Exception('Deal with id $dealId not found');
+  }
 
+  if (deal.personId != null && deal.personId!.isNotEmpty) {
+    // Carica tutte le persone e trova quella giusta
+    final persons = await ref.watch(personsProvider.future);
+    try {
+      final person = persons.firstWhere((p) => p.id == deal.personId);
+      // Restituisci una copia del deal con l'oggetto person associato
+      return deal.copyWith(person: person);
+    } catch (e) {
+      // La persona non è stata trovata, restituisci il deal originale
+      return deal;
+    }
+  }
+
+  // Nessuna persona associata, restituisci il deal originale
+  return deal;
+}
 @riverpod
 Stream<List<Wallet>> userWallets( ref) {
   final walletService = ref.watch(walletServiceProvider);
@@ -93,7 +120,10 @@ Stream<List<Person>> persons( ref) {
 }
 
 @riverpod
-Stream<Person> person( ref, String personId) {
+Stream<Person> person(ref, String personId) {
   final personService = ref.watch(personServiceProvider);
+  // Assumi che il tuo service abbia un metodo che restituisce uno Stream
+  // Se non ce l'ha, dovrai aggiungerlo.
+  // Per ora, lo lascio come lo avevi, ma sappi che getPersonStream DEVE esistere.
   return personService.getPersonStream(personId);
 }

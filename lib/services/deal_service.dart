@@ -55,18 +55,20 @@ class DealService {
         .toList());
   }
   // Metodo per ottenere un singolo deal
+// deal_service.dart
+// IN DEAL SERVICE - Modifica per restituire Deal?
   Future<Deal?> getDeal(String dealId) async {
     try {
-      final doc = await _firestore.collection('deals').doc(dealId).get();
+      final DocumentSnapshot doc = await _firestore.collection('deals').doc(dealId).get();
       if (doc.exists) {
-        return Deal.fromMap(doc.data()!, doc.id);
+        final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        return Deal.fromMap(data, doc.id);
       }
-      return null;
+      return null; // invece di lanciare eccezione
     } catch (e) {
       throw Exception('Errore nel caricamento del deal: $e');
     }
   }
-
 
   // 3. Filtra deals per periodo
   Stream<List<Deal>> getUserDealsByDateRange(

@@ -11,7 +11,7 @@ class Person {
   final DateTime createdAt;
   final DateTime? lastUpdated;
   final PersonType personType;
-  final String? localImagePath; // <- AGGIUNGI QUESTO CAMPO
+  final String? localImagePath;
   final String? photoUrl;
 
   const Person({
@@ -22,11 +22,10 @@ class Person {
     required this.createdAt,
     this.lastUpdated,
     required this.personType,
-    this.localImagePath, // <- AGGIUNGI QUESTO CAMPO
+    this.localImagePath,
     this.photoUrl,
   });
 
-  // Metodo helper per tipo di persona
   String get type {
     switch (personType) {
       case PersonType.supplier:
@@ -38,35 +37,20 @@ class Person {
     }
   }
 
-  // Metodo helper per contare i deals
   int get dealsCount => dealIds.length;
 
+  // --- INIZIO DELLA CORREZIONE ---
+  // Ora confrontiamo gli oggetti Person solo in base al loro ID.
+  // Questo è il modo corretto e risolve l'errore del Dropdown.
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-          (other is Person &&
-              runtimeType == other.runtimeType &&
-              id == other.id &&
-              name == other.name &&
-              ownerId == other.ownerId &&
-              dealIds == other.dealIds &&
-              createdAt == other.createdAt &&
-              lastUpdated == other.lastUpdated &&
-              personType == other.personType &&
-              localImagePath == other.localImagePath &&
-              photoUrl == other.photoUrl);
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Person && other.id == id;
+  }
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      ownerId.hashCode ^
-      dealIds.hashCode ^
-      createdAt.hashCode ^
-      lastUpdated.hashCode ^
-      personType.hashCode ^
-      localImagePath.hashCode ^
-      photoUrl.hashCode;
+  int get hashCode => id.hashCode;
+  // --- FINE DELLA CORREZIONE ---
 
   @override
   String toString() {
@@ -107,7 +91,6 @@ class Person {
     );
   }
 
-  // PER FIRESTORE - SENZA ID
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -121,7 +104,6 @@ class Person {
     };
   }
 
-  // DA FIRESTORE - CON ID SEPARATO
   factory Person.fromMap(Map<String, dynamic> map, String id) {
     return Person(
       id: id,
@@ -138,7 +120,6 @@ class Person {
     );
   }
 
-  // Helper per convertire stringa a PersonType
   static PersonType _stringToPersonType(String typeString) {
     switch (typeString) {
       case 'supplier':

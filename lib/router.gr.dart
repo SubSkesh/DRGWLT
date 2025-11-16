@@ -167,6 +167,53 @@ class AuthGateRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [DealDetailScreen]
+class DealDetailRoute extends PageRouteInfo<DealDetailRouteArgs> {
+  DealDetailRoute({
+    Key? key,
+    required String dealId,
+    List<PageRouteInfo>? children,
+  }) : super(
+         DealDetailRoute.name,
+         args: DealDetailRouteArgs(key: key, dealId: dealId),
+         initialChildren: children,
+       );
+
+  static const String name = 'DealDetailRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<DealDetailRouteArgs>();
+      return DealDetailScreen(key: args.key, dealId: args.dealId);
+    },
+  );
+}
+
+class DealDetailRouteArgs {
+  const DealDetailRouteArgs({this.key, required this.dealId});
+
+  final Key? key;
+
+  final String dealId;
+
+  @override
+  String toString() {
+    return 'DealDetailRouteArgs{key: $key, dealId: $dealId}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! DealDetailRouteArgs) return false;
+    return key == other.key && dealId == other.dealId;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ dealId.hashCode;
+}
+
+/// generated route for
 /// [HomeScreen]
 class HomeRoute extends PageRouteInfo<void> {
   const HomeRoute({List<PageRouteInfo>? children})

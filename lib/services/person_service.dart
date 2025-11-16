@@ -96,48 +96,50 @@ class PersonService {
   }
 
   /// Aggiorna una persona esistente
+// In lib/services/person_service.dart
+
+// SOSTITUISCI il vecchio updatePerson con questo
   Future<void> updatePerson({
-    required Person person,
-    File? newImageFile, // <- Solo salvataggio locale
+    required String personId,
+    required String name,
+    required PersonType personType,
+    required String ownerId,
+    File? imageFile, // File della nuova immagine (o null se non cambia)
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('Utente non autenticato');
+    if (user == null || user.uid != ownerId) {
+      throw Exception('Non autorizzato');
+    }
 
-    final personRef = _firestore.collection('persons').doc(person.id);
+    final personRef = _firestore.collection('persons').doc(personId);
     final personDoc = await personRef.get();
-
     if (!personDoc.exists) throw Exception('Persona non trovata');
 
-    final data = personDoc.data();
-    if (data != null && data is Map<String, dynamic>) {
-      if (data['ownerId'] != user.uid) throw Exception('Non autorizzato');
+    final currentData = personDoc.data()!;
+    String? currentLocalPath = currentData['localImagePath'];
+    String? updatedImagePath = currentLocalPath;
 
-      String? updatedImagePath = person.localImagePath;
-
-      // Gestione immagine SOLO locale
-      if (newImageFile != null) {
-        // Cancella vecchia immagine locale
-        if (person.localImagePath != null) {
-          await LocalImageService.deleteAgentImage(person.localImagePath!);
-        }
-
-        // Salva nuova immagine locale
-        updatedImagePath = await LocalImageService.saveAgentImage(
-            newImageFile,
-            person.id
-        );
+    // Gestione immagine SOLO locale
+    if (imageFile != null) {
+      // Se c'era un'immagine prima, cancellala dal dispositivo
+      if (currentLocalPath != null && currentLocalPath.isNotEmpty) {
+        await LocalImageService.deleteAgentImage(currentLocalPath);
       }
-
-      // Aggiorna Firestore SOLO con il path locale
-      await personRef.update({
-        'name': person.name,
-        'personType': person.personType.index,
-        'dealIds': person.dealIds,
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'localImagePath': updatedImagePath, // <- Solo il path, non l'immagine
-      });
+      // Salva la nuova immagine localmente
+      updatedImagePath = await LocalImageService.saveAgentImage(imageFile, personId);
     }
+
+    // Crea la mappa dei dati da aggiornare
+    final Map<String, dynamic> dataToUpdate = {
+      'name': name,
+      'personType': personType.name, // Salva il nome dell'enum (più sicuro)
+      'lastUpdated': FieldValue.serverTimestamp(),
+      'localImagePath': updatedImagePath,
+    };
+
+    await personRef.update(dataToUpdate);
   }
+
 
   /// Elimina una persona
   Future<void> deletePerson(String personId) async {

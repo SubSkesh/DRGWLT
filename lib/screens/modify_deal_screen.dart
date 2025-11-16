@@ -203,7 +203,7 @@ class _ModifyDealScreenState extends State<ModifyDealScreen> {
         context.router.pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Deal succesfully modified!'),
+            content: const Text('Deal modificato con successo!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -596,7 +596,7 @@ class _ModifyDealScreenState extends State<ModifyDealScreen> {
                         onPressed: () => _selectDate(context),
                         child: Text(
                           '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                          style: TextStyle(color: theme.colorScheme.onPrimary),
+                          style: TextStyle(color: theme.colorScheme.primary),
                         ),
                       ),
                     ],
@@ -636,7 +636,7 @@ class _ModifyDealScreenState extends State<ModifyDealScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Update Deal'),
+                child: const Text('Aggiorna Deal'),
               ),
             ],
           ),

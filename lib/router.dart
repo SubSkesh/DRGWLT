@@ -18,6 +18,8 @@ import 'package:drgwallet/screens/add_wallet_screen.dart';
 import 'package:drgwallet/screens/todeletescreen.dart';
 import 'package:drgwallet/screens/agents_screen.dart';
 import 'package:drgwallet/screens/add_agent_screen.dart';
+import 'package:drgwallet/screens/deal_detail_screen.dart';
+
 
 
 import 'models/person.dart';
@@ -39,6 +41,9 @@ class AppRouter extends RootStackRouter {
     // Nuove route aggiunte
     AutoRoute(page: AddDealRoute.page),
     AutoRoute(page: WalletDetailRoute.page),
+    AutoRoute(page: DealDetailRoute.page),
+
+
     AutoRoute(page: ModifyWalletRoute.page),
     AutoRoute(page: ModifyDealRoute.page),
 

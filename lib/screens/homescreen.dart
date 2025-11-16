@@ -7,7 +7,6 @@ import 'package:drgwallet/models/person.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/models/wallet.dart';import 'package:drgwallet/models/person.dart';
 import 'package:drgwallet/widgets/custom_bottom_nav.dart';
-import 'package:drgwallet/widgets/deal_list_item.dart';
 import 'package:drgwallet/widgets/wallet_card.dart';
 import 'package:drgwallet/widgets/add_fab.dart';
 import 'package:drgwallet/theme/app_theme.dart';

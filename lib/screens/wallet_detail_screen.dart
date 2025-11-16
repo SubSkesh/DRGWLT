@@ -1,20 +1,18 @@
+// lib/screens/wallet_detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:drgwallet/router.dart';
 import 'package:drgwallet/models/wallet.dart';
-import 'package:drgwallet/services/wallet_service.dart';
 import 'package:drgwallet/services/deal_service.dart';
-import 'package:drgwallet/widgets/deal_list_item.dart';
-import 'package:drgwallet/utils/wallet_calculator.dart';
 import 'package:drgwallet/models/deal.dart';
-import 'package:drgwallet/utils/deal_calculator.dart';
-import 'package:drgwallet/theme/app_theme.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/widgets/add_fab_deal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
-import 'package:drgwallet/screens/modify_deal_screen.dart';
+// Assumiamo che l'import corretto sia questo:
+import 'package:drgwallet/widgets/DealListItem.dart';
 
 @RoutePage()
 class WalletDetailScreen extends ConsumerStatefulWidget {
@@ -27,19 +25,22 @@ class WalletDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
-  final WalletService _walletService = WalletService();
   final DealService _dealService = DealService();
 
-  UniqueKey _refreshKey = UniqueKey();
-
-  void _onAddPressed(TxType? dealType) {
+  void _onAddPressed(TxType? dealType) async {
     if (dealType != null) {
-      context.router.push(
+      // Aspetta che la schermata di aggiunta sia chiusa per aggiornare la lista
+      await context.router.push(
         AddDealRoute(
           dealType: dealType,
           preSelectedWalletId: widget.walletId,
         ),
       );
+      // Invalida la lista principale per mostrare il nuovo deal
+      if(mounted) {
+        ref.invalidate(walletDealsProvider(widget.walletId));
+        ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+      }
     }
   }
 
@@ -61,7 +62,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
             ),
           ),
           loading: () => const Text("Caricamento..."),
-          error: (e, _) => Text("Errore"),
+          error: (e, _) => const Text("Errore"),
         ),
       ),
       body: Padding(
@@ -80,109 +81,79 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                   child: Column(
                     children: [
                       _buildStatRow('Total Deals', wallet.totalDeals?.toString() ?? '0'),
-                      _buildStatRow('Total Spent',
-                          '€${wallet.totalSpent?.toStringAsFixed(2) ?? "0.00"}'),
-                      _buildStatRow('Totale Guadagnato',
-                          '€${wallet.totalEarned?.toStringAsFixed(2) ?? "0.00"}'),
-                      _buildStatRow('Profitto Netto',
-                          '€${wallet.netProfit?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildStatRow('Total Spent', '€${wallet.totalSpent?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildStatRow('Totale Guadagnato', '€${wallet.totalEarned?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildStatRow('Profitto Netto', '€${wallet.netProfit?.toStringAsFixed(2) ?? "0.00"}'),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Last Deals',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              const Text('Last Deals', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-
-              // LISTA DEALS
               Expanded(
                 child: dealsAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, st) => Center(child: Text("Errore: $err")),
                   data: (deals) {
                     if (deals.isEmpty) {
-                      return const Center(child: Text('Nessun deal trovato'));
+                      return const Center(child: Text('No deals found'));
                     }
                     return ListView.builder(
-                      key: _refreshKey,
                       itemCount: deals.length,
                       itemBuilder: (context, index) {
                         final deal = deals[index];
                         return GestureDetector(
+                          onTap: () async {
+                            await context.router.push(DealDetailRoute(dealId: deal.id));
+                            if (mounted) {
+                              // FORZA L'AGGIORNAMENTO DELLA LISTA E DELLE STATISTICHE
+                              ref.invalidate(walletDealsProvider(widget.walletId));
+                              ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+                            }
+                          },
                           onLongPressStart: (details) async {
+                            final dealWithPerson = await ref.read(enrichedDealProvider(deal.id).future);
                             final actions = [
-                              drag_context_menu.ContextAction(
-                                icon: Icons.edit,
-                                label: 'Modifica',
-                                color: theme.colorScheme.primary,
-                              ),
-                              drag_context_menu.ContextAction(
-                                icon: Icons.copy,
-                                label: 'Clone',
-                                color: theme.colorScheme.primary,
-                              ),
-                              drag_context_menu.ContextAction(
-                                  icon: deal.isPending
-                                      ? Icons.check_circle
-                                      : Icons.pending_actions,
-                                  label: deal.isPending
-                                      ? 'Not Pending'
-                                      : 'Pending',
-                                  color: deal.isPending
-                                      ? theme.colorScheme.primary
-                                      : Colors.orange
-                              ),
-                              drag_context_menu.ContextAction(
-                                icon: Icons.delete,
-                                label: 'Elimina',
-                                color: Colors.red,
-                              ),
+                              drag_context_menu.ContextAction(icon: Icons.edit, label: 'Modifica', color: theme.colorScheme.primary),
+                              drag_context_menu.ContextAction(icon: Icons.copy, label: 'Clone', color: theme.colorScheme.primary),
+                              drag_context_menu.ContextAction(icon: dealWithPerson.isPending ? Icons.check_circle : Icons.pending_actions, label: dealWithPerson.isPending ? 'Not Pending' : 'Pending', color: dealWithPerson.isPending ? theme.colorScheme.primary : Colors.orange),
+                              drag_context_menu.ContextAction(icon: Icons.delete, label: 'Elimina', color: Colors.red),
                             ];
-
-                            final selectedIndex =
-                            await drag_context_menu.showDragContextMenu(
-                              context,
-                              details.globalPosition,
-                              actions,
-                              'walletdetailscreen',
-                              mode: drag_context_menu.MenuOpenMode.dragToSelect,
-                            );
-
+                            final selectedIndex = await drag_context_menu.showDragContextMenu(context, details.globalPosition, actions, 'walletdetailscreen', mode: drag_context_menu.MenuOpenMode.dragToSelect);
                             if (selectedIndex != null) {
                               switch (selectedIndex) {
-                                case 0:
-                                // Modifica deal
+                                case 0: // Modifica deal
                                   if (mounted) {
-                                    context.router.push(ModifyDealRoute(dealId: deal.id));
+                                    await context.router.push(ModifyDealRoute(dealId: deal.id));
+                                    // FORZA L'AGGIORNAMENTO DELLA LISTA E DELLE STATISTICHE
+                                    ref.invalidate(walletDealsProvider(widget.walletId));
+                                    ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
                                   }
                                   break;
-                                case 1:
-                                // Clone deal
-                                  print('Clone deal: ${deal.id}');
-                                  await _dealService.createDeal(deal.copyWith(
-                                      date: DateTime.now(),
-                                      id: DateTime.now().millisecondsSinceEpoch.toString()
-                                  ));
+                                case 1: // Clone deal
+                                  await _dealService.createDeal(dealWithPerson.copyWith(date: DateTime.now()));
+                                  ref.invalidate(walletDealsProvider(widget.walletId));
+                                  ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
                                   break;
-                                case 2:
-                                // Toggle pending
-                                  final updateDeal = deal.copyWith(isPending: !deal.isPending);
+                                case 2: // Toggle pending
+                                  final updateDeal = dealWithPerson.copyWith(isPending: !dealWithPerson.isPending);
                                   await _dealService.updateDeal(updateDeal);
+                                  // Per il toggle pending, invalidare il singolo item è sufficiente
+                                  // e più performante.
+                                  ref.invalidate(enrichedDealProvider(deal.id));
                                   break;
-                                case 3:
-                                // Elimina deal
-                                  print('Elimina deal: ${deal.id}');
-                                  // await _dealService.deleteDeal(deal.id!);
+                                case 3: // Elimina deal
+                                // await _dealService.deleteDeal(deal.id);
+                                // ref.invalidate(walletDealsProvider(widget.walletId));
+                                // ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
                                   break;
                               }
                             }
                           },
-                          child: DealListItem(deal: deal),
-                        ); // ← CORREZIONE: Aggiunto il punto e virgola qui
-                      }, // ← CORREZIONE: Questa virgola chiude il itemBuilder
+                          child: DealListItem(dealId: deal.id),
+                        );
+                      },
                     );
                   },
                 ),
@@ -204,10 +175,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: theme.textTheme.bodyLarge),
-          Text(value),
-        ],
+        children: [Text(label, style: theme.textTheme.bodyLarge), Text(value)],
       ),
     );
   }

@@ -38,12 +38,12 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
     final actions = [
       drag_context_menu.ContextAction(
         icon: Icons.edit,
-        label: 'Modifica',
+        label: 'Modify',
         color: Theme.of(context).colorScheme.primary,
       ),
       drag_context_menu.ContextAction(
         icon: Icons.delete,
-        label: 'Elimina',
+        label: 'Delete',
         color: Colors.red,
       ),
     ];
@@ -132,6 +132,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
                     SnackBar(
                       content: Text('Errore durante l\'eliminazione: $e'),
                       backgroundColor: Colors.red,
+
                     ),
                   );
                 }

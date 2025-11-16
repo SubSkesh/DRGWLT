@@ -108,7 +108,7 @@ final userDealsProvider = AutoDisposeStreamProvider<List<Deal>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef UserDealsRef = AutoDisposeStreamProviderRef<List<Deal>>;
-String _$dealHash() => r'c065f461af91a393c9f9caa4b0c64ce01507b7f6';
+String _$dealHash() => r'22c5f21d42c72d62000e2da99987f15ad7a8d3ea';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -240,6 +240,127 @@ class _DealProviderElement extends AutoDisposeFutureProviderElement<Deal>
 
   @override
   String get dealId => (origin as DealProvider).dealId;
+}
+
+String _$enrichedDealHash() => r'db6f1fcf654d72a35fc35885601ec365f33e1374';
+
+/// See also [enrichedDeal].
+@ProviderFor(enrichedDeal)
+const enrichedDealProvider = EnrichedDealFamily();
+
+/// See also [enrichedDeal].
+class EnrichedDealFamily extends Family<AsyncValue<Deal>> {
+  /// See also [enrichedDeal].
+  const EnrichedDealFamily();
+
+  /// See also [enrichedDeal].
+  EnrichedDealProvider call(String dealId) {
+    return EnrichedDealProvider(dealId);
+  }
+
+  @override
+  EnrichedDealProvider getProviderOverride(
+    covariant EnrichedDealProvider provider,
+  ) {
+    return call(provider.dealId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'enrichedDealProvider';
+}
+
+/// See also [enrichedDeal].
+class EnrichedDealProvider extends AutoDisposeFutureProvider<Deal> {
+  /// See also [enrichedDeal].
+  EnrichedDealProvider(String dealId)
+    : this._internal(
+        (ref) => enrichedDeal(ref as EnrichedDealRef, dealId),
+        from: enrichedDealProvider,
+        name: r'enrichedDealProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product')
+                ? null
+                : _$enrichedDealHash,
+        dependencies: EnrichedDealFamily._dependencies,
+        allTransitiveDependencies:
+            EnrichedDealFamily._allTransitiveDependencies,
+        dealId: dealId,
+      );
+
+  EnrichedDealProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.dealId,
+  }) : super.internal();
+
+  final String dealId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Deal> Function(EnrichedDealRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: EnrichedDealProvider._internal(
+        (ref) => create(ref as EnrichedDealRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        dealId: dealId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Deal> createElement() {
+    return _EnrichedDealProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is EnrichedDealProvider && other.dealId == dealId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, dealId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin EnrichedDealRef on AutoDisposeFutureProviderRef<Deal> {
+  /// The parameter `dealId` of this provider.
+  String get dealId;
+}
+
+class _EnrichedDealProviderElement
+    extends AutoDisposeFutureProviderElement<Deal>
+    with EnrichedDealRef {
+  _EnrichedDealProviderElement(super.provider);
+
+  @override
+  String get dealId => (origin as EnrichedDealProvider).dealId;
 }
 
 String _$userWalletsHash() => r'e6f5e8920551daedee26d7e2f0a0aafb7d34e804';
