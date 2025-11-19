@@ -97,7 +97,6 @@ Future<Wallet> getWallet(String walletId) async {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
-      // Stessa logica per Deal, se anche lui ha fromMap con 2 parametri
       return Deal.fromMap(doc.data(), doc.id);
     }).toList());
   }
@@ -131,52 +130,33 @@ Future<Wallet> getWallet(String walletId) async {
       }
     }).toList();
   }
-  Stream<Wallet> getWalletWithStatsStream(String walletId) {
-    // 1. Stream per il wallet base (dati grezzi da Firestore)
-    //    Usiamo il tuo metodo esistente `getWalletStream` che gestisce già Wallet.fromMap
-    final Stream<Wallet> walletBaseStream = getWalletStream(walletId);
 
-    // 2. Stream per i deals associati a quel wallet
-    //    Usiamo il tuo metodo esistente `getWalletDealsStream`
+
+  Stream<Wallet> getWalletWithStatsStream(String walletId, Stream<List<Good>> goodsStream) {
+
+    final Stream<Wallet> walletBaseStream = getWalletStream(walletId);
     final Stream<List<Deal>> walletDealsStream = getWalletDealsStream(walletId);
 
-    // 3. Gestione dei Goods (IMPORTANTE per WalletCalculator)
-    //    Questa è la parte che richiede una decisione da parte tua.
-    //    Opzione A: Non hai un sistema per i Goods o usi i fallback.
-    final Stream<List<Good>> goodsStream = Stream.value(const <Good>[]); // Emette una lista vuota una sola volta
+    // Rimuovi la riga: final Stream<List<Good>> goodsStream = Stream.value(const <Good>[]);
 
-    //    Opzione B: Hai un modo per ottenere i goods (es. da un altro metodo o stream nel servizio).
-    //    Sostituisci la riga sopra con il tuo vero stream di goods, ad esempio:
-    //    final Stream<List<Good>> goodsStream = _getAllGoodsStream(); // Metodo ipotetico nel servizio
-
-    // 4. Combina gli stream.
-    //    StreamZip attende che tutti gli stream forniti emettano almeno un valore,
-    //    poi emette una lista contenente l'ultimo valore emesso da ciascuno.
-    //    Successivamente, emette una nuova lista ogni volta che *qualsiasi* degli stream sorgente emette.
+    // Ora usiamo lo stream passato come parametro
     return StreamZip([
       walletBaseStream,
       walletDealsStream,
-      goodsStream, // Stream dei goods (o la lista vuota)
+      goodsStream,
     ]).map((data) {
-      // data[0] è l'emissione di walletBaseStream (un Wallet)
-      // data[1] è l'emissione di walletDealsStream (una List<Deal>)
-      // data[2] è l'emissione di goodsStream (una List<Good>)
-
       final Wallet walletBase = data[0] as Wallet;
       final List<Deal> deals = data[1] as List<Deal>;
       final List<Good> goods = data[2] as List<Good>;
 
-      // Applica la logica di calcolo per arricchire il wallet
-      final Wallet enrichedWallet = WalletCalculator.enrichWithCalculations(
+      // Ora il calcolatore ha i beni veri per calcolare l'inventario!
+      return WalletCalculator.enrichWithCalculations(
         wallet: walletBase,
         deals: deals,
-        goods: goods, // Passa i goods qui
+        goods: goods,
       );
-
-      return enrichedWallet;
     });
   }
-
   /// Carica un wallet completo con statistiche calcolate per un periodo specifico
   Future<Wallet> getWalletWithStats(
       String walletId, {

@@ -2,10 +2,14 @@ import 'package:drgwallet/services/firebase_authservice.dart';
 import 'package:drgwallet/services/wallet_service.dart';
 import 'package:drgwallet/services/deal_service.dart';
 import 'package:drgwallet/services/person_service.dart';
+import 'package:drgwallet/services/goods_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drgwallet/models/deal.dart';
-import 'package:drgwallet/models/wallet.dart';import 'package:drgwallet/models/person.dart';
+import 'package:drgwallet/models/wallet.dart';
+import 'package:drgwallet/models/person.dart';
+import 'package:drgwallet/models/good.dart';
+
 part 'providers.g.dart';
 
 @riverpod
@@ -19,6 +23,9 @@ DealService dealService( ref) => DealService();
 
 @riverpod
 PersonService personService( ref) => PersonService();
+
+@riverpod
+GoodService goodService(ref) => GoodService();
 
 @riverpod
 Stream<User?> authStateChanges( ref) {
@@ -40,6 +47,7 @@ Future<Deal> deal(ref, String dealId) async {
   }
   return deal;
 }
+//todo: enricheddeal è uguale a deal sopra,non ricopre funzionalià aggiuntive
 @riverpod
 Future<Deal> enrichedDeal( ref, String dealId) async {
   final dealService = ref.watch(dealServiceProvider);
@@ -76,11 +84,16 @@ Stream<Wallet> walletDetails( ref, String walletId) {
   return walletService.getWalletStream(walletId);
 }
 @riverpod
-Stream<Wallet> walletDetailsWithStatsStream(ref,String walletId) {
+Stream<Wallet> walletDetailsWithStatsStream( ref, String walletId) {
   final walletService = ref.watch(walletServiceProvider);
-  return walletService.getWalletWithStatsStream(walletId);
-}
+  final goodService = ref.watch(goodServiceProvider); // Recupera il good service
 
+  // Passiamo lo stream dei goods al metodo del wallet service
+  return walletService.getWalletWithStatsStream(
+      walletId,
+      goodService.getUserGoods()
+  );
+}
 
 
 @riverpod
@@ -126,4 +139,11 @@ Stream<Person> person(ref, String personId) {
   // Se non ce l'ha, dovrai aggiungerlo.
   // Per ora, lo lascio come lo avevi, ma sappi che getPersonStream DEVE esistere.
   return personService.getPersonStream(personId);
+}
+
+
+@riverpod
+Stream<List<Good>> goods( ref) {
+  final goodService = ref.watch(goodServiceProvider);
+  return goodService.getUserGoods();
 }

@@ -16,10 +16,15 @@ class AddAgentRoute extends PageRouteInfo<AddAgentRouteArgs> {
   AddAgentRoute({
     Key? key,
     PersonType? initialType,
+    Person? personToEdit,
     List<PageRouteInfo>? children,
   }) : super(
          AddAgentRoute.name,
-         args: AddAgentRouteArgs(key: key, initialType: initialType),
+         args: AddAgentRouteArgs(
+           key: key,
+           initialType: initialType,
+           personToEdit: personToEdit,
+         ),
          initialChildren: children,
        );
 
@@ -31,32 +36,41 @@ class AddAgentRoute extends PageRouteInfo<AddAgentRouteArgs> {
       final args = data.argsAs<AddAgentRouteArgs>(
         orElse: () => const AddAgentRouteArgs(),
       );
-      return AddAgentScreen(key: args.key, initialType: args.initialType);
+      return AddAgentScreen(
+        key: args.key,
+        initialType: args.initialType,
+        personToEdit: args.personToEdit,
+      );
     },
   );
 }
 
 class AddAgentRouteArgs {
-  const AddAgentRouteArgs({this.key, this.initialType});
+  const AddAgentRouteArgs({this.key, this.initialType, this.personToEdit});
 
   final Key? key;
 
   final PersonType? initialType;
 
+  final Person? personToEdit;
+
   @override
   String toString() {
-    return 'AddAgentRouteArgs{key: $key, initialType: $initialType}';
+    return 'AddAgentRouteArgs{key: $key, initialType: $initialType, personToEdit: $personToEdit}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! AddAgentRouteArgs) return false;
-    return key == other.key && initialType == other.initialType;
+    return key == other.key &&
+        initialType == other.initialType &&
+        personToEdit == other.personToEdit;
   }
 
   @override
-  int get hashCode => key.hashCode ^ initialType.hashCode;
+  int get hashCode =>
+      key.hashCode ^ initialType.hashCode ^ personToEdit.hashCode;
 }
 
 /// generated route for

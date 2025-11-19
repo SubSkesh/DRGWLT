@@ -11,8 +11,9 @@ import 'package:drgwallet/widgets/add_fab_deal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:drgwallet/widgets/drag_context_menu.dart' as drag_context_menu;
-// Assumiamo che l'import corretto sia questo:
 import 'package:drgwallet/widgets/DealListItem.dart';
+import 'package:drgwallet/widgets/alarm_delete_deal.dart';
+
 
 @RoutePage()
 class WalletDetailScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,44 @@ class WalletDetailScreen extends ConsumerStatefulWidget {
 class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
   final DealService _dealService = DealService();
 
+
+  Future<void> _showDeleteDialog(BuildContext context, Deal deal) async {
+    // Mostra il dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => DealAlarmDelete(deal: deal),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        // Esegui l'eliminazione tramite il service (già istanziato come _dealService)
+        await _dealService.deleteDeal(deal.id);
+
+        // Forza l'aggiornamento della lista e delle statistiche
+        if (mounted) {
+          ref.invalidate(walletDealsProvider(widget.walletId));
+          ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Deal deleted successfully'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting deal: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
   void _onAddPressed(TxType? dealType) async {
     if (dealType != null) {
       // Aspetta che la schermata di aggiunta sia chiusa per aggiornare la lista
@@ -131,10 +170,51 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                                     ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
                                   }
                                   break;
-                                case 1: // Clone deal
-                                  await _dealService.createDeal(dealWithPerson.copyWith(date: DateTime.now()));
-                                  ref.invalidate(walletDealsProvider(widget.walletId));
-                                  ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+
+                                case 1: // Clone deal (Verifica che l'indice corrisponda alla voce 'Clone' nella tua lista actions)
+                                  try {
+                                    // 1. Genera un NUOVO ID univoco (fondamentale!)
+                                    // Usiamo lo stesso metodo basato sul tempo usato in AddDealScreen
+                                    final newId = DateTime.now().millisecondsSinceEpoch.toString();
+
+                                    // 2. Crea una copia del deal con il nuovo ID e la data aggiornata
+                                    final newDeal = dealWithPerson.copyWith(
+                                      id: newId,
+                                      date: DateTime.now(),       // La data operativa diventa "adesso"
+                                      timestamp: DateTime.now(),  // La data di creazione tecnica diventa "adesso"
+                                      // Puoi decidere se resettare lo stato pending o mantenerlo
+                                      isPending: dealWithPerson.isPending,
+                                    );
+
+                                    // 3. Salva il nuovo deal su Firestore
+                                    await _dealService.createDeal(newDeal);
+
+                                    // 4. Aggiorna la UI e dai feedback all'utente
+                                    // 4. Aggiorna la UI e dai feedback all'utente
+                                    if (mounted) {
+                                      // Invalida i provider per ricaricare la lista e le statistiche
+                                      ref.invalidate(walletDealsProvider(widget.walletId));
+                                      ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Deal cloned successfully!'),
+                                          backgroundColor: theme.colorScheme.primary,
+                                          behavior: SnackBarBehavior.floating,
+                                          duration: const Duration(milliseconds: 1500),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error cloning deal: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
                                   break;
                                 case 2: // Toggle pending
                                   final updateDeal = dealWithPerson.copyWith(isPending: !dealWithPerson.isPending);
@@ -147,6 +227,7 @@ class _WalletDetailScreenState extends ConsumerState<WalletDetailScreen> {
                                 // await _dealService.deleteDeal(deal.id);
                                 // ref.invalidate(walletDealsProvider(widget.walletId));
                                 // ref.invalidate(walletDetailsWithStatsStreamProvider(widget.walletId));
+                                  _showDeleteDialog(context, dealWithPerson);
                                   break;
                               }
                             }

@@ -74,6 +74,22 @@ final personServiceProvider = AutoDisposeProvider<PersonService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef PersonServiceRef = AutoDisposeProviderRef<PersonService>;
+String _$goodServiceHash() => r'ec76ed226286d84498382d381a99a3f12ceb7f87';
+
+/// See also [goodService].
+@ProviderFor(goodService)
+final goodServiceProvider = AutoDisposeProvider<GoodService>.internal(
+  goodService,
+  name: r'goodServiceProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$goodServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef GoodServiceRef = AutoDisposeProviderRef<GoodService>;
 String _$authStateChangesHash() => r'dcffd14dd4bb6710b3ffaac599ec532a475daa0a';
 
 /// See also [authStateChanges].
@@ -501,7 +517,7 @@ class _WalletDetailsProviderElement
 }
 
 String _$walletDetailsWithStatsStreamHash() =>
-    r'337754bfca24de811827a41ed2aec8f31f2b2377';
+    r'5578f30d4bd58d24aa92ac0df827d533705d3667';
 
 /// See also [walletDetailsWithStatsStream].
 @ProviderFor(walletDetailsWithStatsStream)
@@ -999,6 +1015,22 @@ class _PersonProviderElement extends AutoDisposeStreamProviderElement<Person>
   String get personId => (origin as PersonProvider).personId;
 }
 
+String _$goodsHash() => r'678f9487101fa6ae140ba5ca79105bf680e55ff9';
+
+/// See also [goods].
+@ProviderFor(goods)
+final goodsProvider = AutoDisposeStreamProvider<List<Good>>.internal(
+  goods,
+  name: r'goodsProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$goodsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef GoodsRef = AutoDisposeStreamProviderRef<List<Good>>;
 String _$selectedTabHash() => r'7b97815c38bd6bc2d0d3d000fda38b6735f0082e';
 
 /// See also [SelectedTab].

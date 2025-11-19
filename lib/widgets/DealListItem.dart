@@ -1,98 +1,160 @@
-// lib/widgets/deal_list_item.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/models/enum.dart';
 import 'package:drgwallet/providers/providers.dart';
 import 'package:drgwallet/router.dart';
 import 'package:auto_route/auto_route.dart';
-import 'package:drgwallet/widgets/person_avatar.dart'; // Assicurati che questo import sia corretto
+import 'package:drgwallet/widgets/person_avatar.dart';
+import 'package:intl/intl.dart'; // Assicurati di avere intl nel pubspec.yaml per le date
 
-// 1. Converti a ConsumerWidget e accetta 'dealId'
 class DealListItem extends ConsumerWidget {
   final String dealId;
 
-  // Il costruttore ora vuole 'dealId'
   const DealListItem({super.key, required this.dealId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 2. Usa Riverpod per caricare i dati del singolo deal
     final dealAsync = ref.watch(enrichedDealProvider(dealId));
     final theme = Theme.of(context);
 
-    // 3. Usa .when() per gestire caricamento, errore e dati pronti
     return dealAsync.when(
-      loading: () => Card(
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: ListTile(
-          leading: CircleAvatar(backgroundColor: Colors.grey.shade200),
-          title: Container(
-            height: 12,
-            color: Colors.grey.shade200,
-            margin: const EdgeInsets.only(right: 100),
-          ),
-          subtitle: Container(
-            height: 10,
-            color: Colors.grey.shade200,
-            margin: const EdgeInsets.only(right: 40),
-          ),
-        ),
-      ),
-      error: (err, st) => Card(
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.red.shade100,
-            child: const Icon(Icons.error, color: Colors.red),
-          ),
-          title: const Text('Errore nel caricare il deal'),
-        ),
-      ),
+      loading: () => _buildLoadingSkeleton(),
+      error: (err, st) => const SizedBox(), // Nascondi in caso di errore o mostra icona piccola
       data: (deal) {
-        final color = deal.type == TxType.purchase ? Colors.red : Colors.green;
+        final isPurchase = deal.type == TxType.purchase;
+        final color = isPurchase ? Colors.redAccent : Colors.green;
         final person = deal.person;
 
-        Widget leadingWidget;
-        if (person != null) {
-          leadingWidget = Hero(
-            tag: 'deal_icon_${deal.id}',
-            child: PersonAvatar(person: person, size: 40),
-          );
-        } else {
-          final icon = deal.type == TxType.purchase ? Icons.arrow_downward : Icons.arrow_upward;
-          leadingWidget = Hero(
-            tag: 'deal_icon_${deal.id}',
-            child: CircleAvatar(
-              backgroundColor: color.withOpacity(0.2),
-              child: Icon(icon, color: color),
-            ),
-          );
-        }
+        // Formattazione Data (es: "12 Oct" o "14:30")
+        final dateStr = DateFormat('dd MMM').format(deal.date);
 
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4.0),
-          child: ListTile(
-            leading: leadingWidget,
-            title: Text(
-              '${deal.currency.symbol}${deal.total.toStringAsFixed(2)}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+        // Segno + o - davanti al prezzo
+        final sign = isPurchase ? '-' : '+';
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.router.push(DealDetailRoute(dealId: dealId)),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+              child: Row(
+                children: [
+                  // 1. AVATAR
+                  Hero(
+                    tag: 'deal_icon_${deal.id}',
+                    child: person != null
+                        ? PersonAvatar(person: person, size: 48)
+                        : Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPurchase ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // 2. INFO CENTRALI (Nome e Quantità)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          person?.name ?? (isPurchase ? 'Purchase' : 'Sale'),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '${deal.amount.toStringAsFixed(1)} ${deal.unit.symbol}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                            // Separatore puntino
+                            if (deal.isPending) ...[
+                              const SizedBox(width: 6),
+                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Pending',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10
+                                ),
+                              )
+                            ]
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 3. PREZZO E DATA (Allineati a destra)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$sign${deal.total.toStringAsFixed(2)}${deal.currency.symbol}',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                          letterSpacing: -0.5, // Tocco moderno per i numeri
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateStr,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            subtitle: Text(
-              person?.name ?? '${deal.amount} ${deal.unit.symbol}',
-            ),
-            trailing: deal.isPending
-                ? const Icon(Icons.pending_actions, color: Colors.orange, size: 20)
-                : const Icon(Icons.check_circle, color: Colors.green, size: 20),
-            onTap: () {
-              // L'ID del deal è già disponibile tramite la variabile 'dealId' del widget
-              context.router.push(DealDetailRoute(dealId: dealId));
-            },
           ),
         );
       },
+    );
+  }
+
+  // Skeleton minimale per il loading
+  Widget _buildLoadingSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+      child: Row(
+        children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 100, height: 14, color: Colors.grey.shade200),
+                const SizedBox(height: 6),
+                Container(width: 60, height: 10, color: Colors.grey.shade200),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

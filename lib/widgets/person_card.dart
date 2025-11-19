@@ -6,11 +6,13 @@ import 'package:drgwallet/services/local_image_service.dart';
 class PersonGridCard extends StatefulWidget {
   final Person person;
   final Function(LongPressStartDetails details)? onLongPress;
+  final VoidCallback? onTap; // <--- 1. AGGIUNGI QUESTO
 
   const PersonGridCard({
     super.key,
     required this.person,
     this.onLongPress,
+    this.onTap, // <--- 2. AGGIUNGI QUESTO
   });
 
   @override
@@ -24,6 +26,18 @@ class _PersonGridCardState extends State<PersonGridCard> {
   void initState() {
     super.initState();
     _loadAgentImage();
+  }
+
+  @override
+  void didUpdateWidget(PersonGridCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.person.id != widget.person.id ||
+        oldWidget.person.localImagePath != widget.person.localImagePath) {
+      setState(() {
+        _agentImage = null;
+      });
+      _loadAgentImage();
+    }
   }
 
   Future<void> _loadAgentImage() async {
@@ -42,8 +56,10 @@ class _PersonGridCardState extends State<PersonGridCard> {
     final theme = Theme.of(context);
 
     return GestureDetector(
+      onTap: widget.onTap, // <--- 3. COLLEGALO QUI
       onLongPressStart: widget.onLongPress,
       child: Container(
+        // Il resto del widget rimane invariato...
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -68,6 +84,7 @@ class _PersonGridCardState extends State<PersonGridCard> {
     );
   }
 
+  // ... _buildAgentAvatar e altri metodi helper rimangono uguali ...
   Widget _buildAgentAvatar(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(

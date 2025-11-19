@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
-import 'package:drgwallet/router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/models/person.dart';
 import 'package:drgwallet/providers/providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drgwallet/services/person_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:drgwallet/services/local_image_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 @RoutePage()
 class AddAgentScreen extends ConsumerStatefulWidget {
@@ -28,11 +28,11 @@ class AddAgentScreen extends ConsumerStatefulWidget {
 class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _personService = PersonService();
-  File? _image;
   final _picker = ImagePicker();
 
   late PersonType _selectedType;
+  File? _newImageFile;
+  File? _existingLocalImage;
   bool _isLoading = false;
 
   bool get _isEditing => widget.personToEdit != null;
@@ -40,18 +40,23 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedType = widget.initialType ?? PersonType.anon;
+
     if (_isEditing) {
-      final person = widget.personToEdit!;
-      _nameController.text = person.name;
-      _selectedType = person.personType;
-      if (person.localImagePath != null && person.localImagePath!.isNotEmpty) {
-        final imageFile = File(person.localImagePath!);
-        if (imageFile.existsSync()) {
-          _image = imageFile;
-        }
+      _nameController.text = widget.personToEdit!.name;
+      _selectedType = widget.personToEdit!.personType;
+      _loadExistingImage();
+    }
+  }
+
+  Future<void> _loadExistingImage() async {
+    if (widget.personToEdit?.localImagePath != null) {
+      final file = await LocalImageService.getAgentImage(widget.personToEdit!.localImagePath);
+      if (mounted && file != null) {
+        setState(() {
+          _existingLocalImage = file;
+        });
       }
-    } else {
-      _selectedType = widget.initialType ?? PersonType.anon;
     }
   }
 
@@ -61,261 +66,262 @@ class _AddAgentScreenState extends ConsumerState<AddAgentScreen> {
     super.dispose();
   }
 
-  Future<void> _saveAgent() async {
-    if (!_formKey.currentState!.validate()) return;
+  // --- GESTIONE IMMAGINE (CORRETTA) ---
+  Future<void> _pickImage() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
 
-    setState(() => _isLoading = true);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      if (_isEditing) {
-        await _personService.updatePerson(
-          personId: widget.personToEdit!.id,
-          name: _nameController.text.trim(),
-          personType: _selectedType,
-          imageFile: _image,
-          ownerId: user.uid,
-        );
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Agent updated successfully'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        await _personService.createPerson(
-          name: _nameController.text.trim(),
-          personType: _selectedType,
-          imageFile: _image,
-          ownerId: user.uid,
-        );
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('${_getTypeLabel(_selectedType)} Agent created'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-
-      // Invalidazione dei provider
-      ref.invalidate(personsProvider);
-      ref.invalidate(enrichedDealProvider);
-
-      if (mounted) {
-        context.router.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  // Tutti i metodi helper (getTypeLabel, cropImage, etc.) rimangono invariati...
-  String _getTypeLabel(PersonType type) {
-    switch (type) {
-      case PersonType.supplier: return 'Supplier';
-      case PersonType.buyer: return 'Buyer';
-      case PersonType.anon: return 'Anon';
-    }
-  }
-
-  String _getTypeDescription(PersonType type) {
-    switch (type) {
-      case PersonType.supplier: return 'Person or company from whom you purchase goods or services';
-      case PersonType.buyer: return 'Person or company to whom you sell goods or services';
-      case PersonType.anon: return 'Generic contact without a specific role';
-    }
-  }
-
-  IconData _getTypeIcon(PersonType type) {
-    switch (type) {
-      case PersonType.supplier: return Icons.inventory;
-      case PersonType.buyer: return Icons.shopping_cart;
-      case PersonType.anon: return Icons.person_outline;
-    }
-  }
-
-  Future<void> _cropImage(File imageFile) async {
-    try {
-      final croppedFile = await ImageCropper().cropImage(
-        sourcePath: imageFile.path,
-        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-        compressQuality: 85,
-        maxWidth: 500,
-        maxHeight: 500,
+    if (pickedFile != null) {
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        // Rimosso parametro top-level errato 'aspectRatioPresets'
+        compressQuality: 90,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Crop image',
+            toolbarTitle: 'Crop Image',
             toolbarColor: Theme.of(context).colorScheme.primary,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.square,
             lockAspectRatio: true,
+            // Definisci qui i preset per Android
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.original,
+            ],
           ),
-          IOSUiSettings(title: 'Crop Image', aspectRatioLockEnabled: true),
+          IOSUiSettings(
+            title: 'Crop Image',
+            aspectRatioLockEnabled: true,
+            // Definisci qui i preset per iOS
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.original,
+            ],
+          ),
         ],
       );
+
       if (croppedFile != null) {
-        setState(() { _image = File(croppedFile.path); });
+        setState(() {
+          _newImageFile = File(croppedFile.path);
+        });
       }
-    } catch (e) { /* Gestisci errore */ }
+    }
   }
 
-  Future<void> _takePhoto() async {
+  // --- SALVATAGGIO ---
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+
+    final personService = ref.read(personServiceProvider);
+    final user = FirebaseAuth.instance.currentUser;
+
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.camera);
-      if (pickedFile != null) await _cropImage(File(pickedFile.path));
-    } catch (e) { /* Gestisci errore */ }
-  }
+      if (user == null) throw Exception("User not logged in");
 
-  Future<void> _pickFromGallery() async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) await _cropImage(File(pickedFile.path));
-    } catch (e) { /* Gestisci errore */ }
-  }
+      if (_isEditing) {
+        await personService.updatePerson(
+          personId: widget.personToEdit!.id,
+          name: _nameController.text.trim(),
+          personType: _selectedType,
+          ownerId: user.uid,
+          imageFile: _newImageFile,
+        );
+      } else {
+        await personService.createPerson(
+          name: _nameController.text.trim(),
+          personType: _selectedType,
+          ownerId: user.uid,
+          imageFile: _newImageFile,
+        );
+      }
 
-  Widget _buildIconButton({ required IconData icon, required String label, required VoidCallback onPressed, required ThemeData theme,}) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle,),
-          child: IconButton(onPressed: onPressed, icon: Icon(icon, size: 24), color: theme.colorScheme.onPrimary, padding: const EdgeInsets.all(12),),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface,),),
-      ],
-    );
+      ref.invalidate(personsProvider);
+
+      if (mounted) {
+        context.router.pop();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isEditing ? 'Agent updated' : 'Agent created'),
+          backgroundColor: Colors.green,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text(_isEditing ? 'Modify Agent' : 'New Agent', style: theme.textTheme.headlineLarge!.copyWith(color: theme.colorScheme.primary)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _isLoading ? null : () => context.router.pop()),
+        title: Text(_isEditing ? 'Edit Profile' : 'New Agent'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        actions: [
+          if (_isLoading)
+            const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: CircularProgressIndicator()))
+          else
+            TextButton(
+              onPressed: _save,
+              child: Text(
+                'SAVE',
+                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+              ),
+            )
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-      // *** INIZIO CORREZIONE LAYOUT ***
-          : Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
           child: Column(
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Sezione immagine
-                      Center(
-                        child: Column(
-                          children: [
-                            _image != null
-                                ? CircleAvatar(radius: 50, backgroundImage: FileImage(_image!))
-                                : Container(
-                              width: 100, height: 100,
-                              decoration: BoxDecoration(shape: BoxShape.circle, color: theme.colorScheme.surface, border: Border.all(color: theme.colorScheme.outline)),
-                              child: Icon(Icons.person, size: 40, color: theme.colorScheme.onSurface.withOpacity(0.5)),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _buildIconButton(icon: Icons.camera_alt, label: 'Take Photo', onPressed: _takePhoto, theme: theme),
-                                const SizedBox(width: 20),
-                                _buildIconButton(icon: Icons.photo_library, label: 'Gallery', onPressed: _pickFromGallery, theme: theme),
-                              ],
-                            ),
-                          ],
+              const SizedBox(height: 20),
+
+              // 1. AVATAR PICKER
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    Hero(
+                      tag: _isEditing ? 'person_avatar_${widget.personToEdit!.id}' : 'new_avatar',
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: theme.colorScheme.surfaceContainerHighest, width: 4),
+                          image: _getAvatarImage(),
+                          color: theme.colorScheme.surfaceContainerHighest,
                         ),
+                        child: _getAvatarChild(theme),
                       ),
-                      const SizedBox(height: 24),
-                      // Campo nome
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Agent name', hintText: 'Insert full name or company name',
-                          prefixIcon: const Icon(Icons.badge),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          filled: true, fillColor: theme.colorScheme.surface,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: theme.colorScheme.surface, width: 3),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Name is required';
-                          if (value.trim().length < 2) return 'Name must be at least 2 characters long';
-                          return null;
-                        },
-                        textInputAction: TextInputAction.next,
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
-                      const SizedBox(height: 24),
-                      // Sezione tipo agente
-                      Text('Agent type', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Akira')),
-                      Text('Choose the type of agent you want to create', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                      const SizedBox(height: 16),
-                      // Lista tipi agente
-                      ...PersonType.values.map((type) {
-                        final isSelected = _selectedType == type;
-                        return Card(
-                          elevation: isSelected ? 4 : 1,
-                          color: theme.colorScheme.surface,
-                          margin: const EdgeInsets.only(bottom: 8.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: isSelected ? theme.colorScheme.primary : Colors.transparent, width: isSelected ? 2 : 1),
-                          ),
-                          child: ListTile(
-                            leading: Icon(_getTypeIcon(type), color: isSelected ? theme.colorScheme.primary : Colors.grey, size: 28),
-                            title: Text(_getTypeLabel(type), style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: isSelected ? theme.colorScheme.primary : Colors.grey)),
-                            subtitle: Text(_getTypeDescription(type), style: theme.textTheme.bodySmall),
-                            trailing: isSelected ? Icon(Icons.check_circle, color: theme.colorScheme.primary) : null,
-                            onTap: () => setState(() => _selectedType = type),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          ),
-                        );
-                      }).toList(),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // 2. NAME INPUT
+              TextFormField(
+                controller: _nameController,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: 'Enter Name',
+                  hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                  border: InputBorder.none,
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.2)),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.primary),
+                  ),
+                ),
+                validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
+              ),
+
+              const SizedBox(height: 40),
+
+              // 3. ROLE SELECTION
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'ROLE',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
-              // Pulsante fisso in basso
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveAgent,
-                  style: theme.elevatedButtonTheme.style,
-                  child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                      : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(_isEditing ? Icons.save : Icons.person_add, size: 20),
-                      const SizedBox(width: 8),
-                      Text(_isEditing ? 'SAVE CHANGES' : 'CREATE AGENT', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimary)),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: _buildRoleCard(theme, PersonType.supplier, Icons.inventory_2_outlined, 'Supplier')),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildRoleCard(theme, PersonType.buyer, Icons.shopping_bag_outlined, 'Buyer')),
+                ],
               ),
+              const SizedBox(height: 12),
+              _buildRoleCard(theme, PersonType.anon, Icons.person_outline, 'Generic Contact', isFullWidth: true),
+
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // --- UI HELPERS ---
+
+  DecorationImage? _getAvatarImage() {
+    if (_newImageFile != null) {
+      return DecorationImage(image: FileImage(_newImageFile!), fit: BoxFit.cover);
+    }
+    if (_existingLocalImage != null) {
+      return DecorationImage(image: FileImage(_existingLocalImage!), fit: BoxFit.cover);
+    }
+    return null;
+  }
+
+  Widget? _getAvatarChild(ThemeData theme) {
+    if (_newImageFile != null || _existingLocalImage != null) return null;
+    return Icon(Icons.person, size: 60, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5));
+  }
+
+  Widget _buildRoleCard(ThemeData theme, PersonType type, IconData icon, String label, {bool isFullWidth = false}) {
+    final isSelected = _selectedType == type;
+    final activeColor = type == PersonType.supplier ? Colors.blue : (type == PersonType.buyer ? Colors.green : Colors.grey);
+    final borderColor = isSelected ? activeColor : theme.colorScheme.outline.withOpacity(0.1);
+    final bgColor = isSelected ? activeColor.withOpacity(0.1) : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3);
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        width: isFullWidth ? double.infinity : null,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isSelected ? activeColor : theme.colorScheme.onSurfaceVariant, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? activeColor : theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
         ),
       ),
     );

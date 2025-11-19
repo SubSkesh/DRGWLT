@@ -231,7 +231,7 @@ class _ModifyDealScreenState extends State<ModifyDealScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Modifica Deal',
+          'Deal Modify',
           style: theme.textTheme.headlineSmall,
         ),
         backgroundColor: theme.appBarTheme.backgroundColor,
@@ -596,7 +596,7 @@ class _ModifyDealScreenState extends State<ModifyDealScreen> {
                         onPressed: () => _selectDate(context),
                         child: Text(
                           '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                          style: TextStyle(color: theme.colorScheme.primary),
+                          style: TextStyle(color: theme.colorScheme.onPrimary),
                         ),
                       ),
                     ],

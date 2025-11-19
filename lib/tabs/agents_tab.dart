@@ -52,7 +52,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       context,
       position,
       actions,
-      'person_${person.id}',//parametro inutile
+      'person_${person.id}',
       mode: drag_context_menu.MenuOpenMode.dragToSelect,
     );
 
@@ -69,8 +69,13 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
   }
 
   void _editPerson(BuildContext context, Person person) {
-    // Implementa la modifica della persona
-    print('Modifica persona: ${person.name}');
+    // Naviga alla schermata di modifica
+    context.router.push(
+        AddAgentRoute(
+          initialType: person.personType,
+          personToEdit: person,
+        )
+    );
   }
 
   void _deletePerson(BuildContext context, Person person) {
@@ -83,36 +88,36 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:  Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded,
                 color: Theme.of(context).colorScheme.error, size: 28),
-            Text('Confirm Delete'),
+            const SizedBox(width: 8), // Spaziatura
+            const Text('Confirm Delete'),
           ],
         ),
-
-        content:         RichText(
-      text: TextSpan(
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-    ),
-    children: [
-    const TextSpan(text: "Are you sure you want to delete  \""),
-    TextSpan(
-    text: person.name,
-    style: const TextStyle(fontWeight: FontWeight.bold),
-    ),
-    const TextSpan(text: "\"?\nThis action cannot be undone."), // Aggiunto un avviso
-    ],
-    ),
-    ),
+        content: RichText(
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+            ),
+            children: [
+              const TextSpan(text: "Are you sure you want to delete \""),
+              TextSpan(
+                text: person.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: "\"?\nThis action cannot be undone."),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Undo'),
           ),
-          TextButton(
-            style:destructiveButtonStyle,
+          ElevatedButton(
+            style: destructiveButtonStyle,
             onPressed: () async {
               Navigator.pop(context);
               try {
@@ -125,23 +130,20 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
                     ),
                   );
                 }
+                // ref.refresh non è strettamente necessario con gli stream, ma ok
                 ref.refresh(personsProvider);
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Errore durante l\'eliminazione: $e'),
+                      content: Text('Error deleting agent: $e'),
                       backgroundColor: Colors.red,
-
                     ),
                   );
                 }
               }
             },
-            child: const Text(
-              'Elimina',
-              style: TextStyle(color: Colors.black),
-            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -191,6 +193,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
   Widget _buildAgentsList(List<Person> filteredPersons) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
+      // FIX: Parametro gridDelegate aggiunto
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 16,
@@ -201,7 +204,17 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       itemBuilder: (context, index) {
         final person = filteredPersons[index];
         return PersonGridCard(
+          key: ValueKey(person.id),
           person: person,
+          // FIX: Tap per modificare
+          onTap: () {
+            context.router.push(
+                AddAgentRoute(
+                  initialType: person.personType,
+                  personToEdit: person,
+                )
+            );
+          },
           onLongPress: (details) {
             _showPersonContextMenu(context, details.globalPosition, person);
           },
@@ -253,15 +266,15 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: PersonType.anon,
-                child: Text('Tutti'),
+                child: Text('All'),
               ),
               const PopupMenuItem(
                 value: PersonType.supplier,
-                child: Text('Fornitori'),
+                child: Text('Suppliers'),
               ),
               const PopupMenuItem(
                 value: PersonType.buyer,
-                child: Text('Acquirenti'),
+                child: Text('Buyers'),
               ),
             ],
             icon: Icon(Icons.filter_list, color: theme.iconTheme.color),
